@@ -54,6 +54,7 @@ let categories = [];
 let categoryById = new Map();
 let activeCategory = "all";
 let activeStatus = "all";
+let appliedSourceIds = new Set();
 
 document.addEventListener("DOMContentLoaded", () => {
   initMenu();
@@ -209,6 +210,7 @@ async function loadFundingSources() {
     sources = Array.isArray(data) ? data : data.sources;
     categories = Array.isArray(data) ? [] : data.categories;
     categoryById = new Map(categories.map(category => [category.id, category]));
+    appliedSourceIds = loadAppliedSourceIds();
     const filterOptions = [
       { id: "all", label: "Alla" },
       ...categories.map(category => ({ id: category.id, label: category.label }))
@@ -248,7 +250,7 @@ function renderSources(data) {
     const badgeClass = category?.badge_class || CATEGORY_CLASSES[source.category] || "badge-statlig";
     const sourceName = displayName(source);
     return `
-      <article class="accordion-item">
+      <article class="accordion-item ${appliedSourceIds.has(source.id) ? "source-applied" : ""}" data-source-id="${escapeHTML(source.id)}">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
           ${logoMarkup(source)}
           <span class="accordion-title" title="${escapeHTML(sourceName)}">${escapeHTML(truncateText(sourceName, 30))}</span>
@@ -257,10 +259,16 @@ function renderSources(data) {
           </span>
           <span class="accordion-amount" title="${escapeHTML(source.max_amount)}">${escapeHTML(compactAmount(source.max_amount))}</span>
           <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
+          <span class="application-date" title="${escapeHTML(source.deadline)}">${escapeHTML(listApplicationDate(source.deadline))}</span>
           <span class="accordion-chevron" aria-hidden="true">⌄</span>
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
+            <label class="applied-control">
+              <input type="checkbox" data-applied-source="${escapeHTML(source.id)}" ${appliedSourceIds.has(source.id) ? "checked" : ""}>
+              <span>Ansökt</span>
+              <small>Markera när ansökan är inskickad</small>
+            </label>
             <div class="detail-grid">
               ${detail("Maxbelopp", source.max_amount)}
               ${detail("Ansökningsdatum", shortDeadline(source.deadline))}
@@ -358,6 +366,7 @@ function renderApplications(data) {
       </article>`;
   }).join("");
   bindLogoFallbacks(target);
+  bindAppliedCheckboxes(target);
   bindAccordions(target);
 }
 
@@ -465,8 +474,43 @@ function truncateText(value = "", maxLength = 30) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
 
+function listApplicationDate(value = "") {
+  if (isNominationDeadline(value)) return "—";
+  return truncateText(shortDeadline(value), 15);
+}
+
 function compactAmount(value = "") {
   return String(value).replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
+function loadAppliedSourceIds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("fundello-applied-sources") || "[]");
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveAppliedSourceIds() {
+  try {
+    localStorage.setItem("fundello-applied-sources", JSON.stringify([...appliedSourceIds]));
+  } catch {
+    // The visual state still works for the current page if storage is unavailable.
+  }
+}
+
+function bindAppliedCheckboxes(container) {
+  container.querySelectorAll("[data-applied-source]").forEach(checkbox => {
+    checkbox.addEventListener("change", () => {
+      const sourceId = checkbox.dataset.appliedSource;
+      const item = checkbox.closest(".accordion-item");
+      if (checkbox.checked) appliedSourceIds.add(sourceId);
+      else appliedSourceIds.delete(sourceId);
+      item.classList.toggle("source-applied", checkbox.checked);
+      saveAppliedSourceIds();
+    });
+  });
 }
 
 function applicationDateTiming(value = "") {
