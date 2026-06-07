@@ -221,7 +221,10 @@ function renderSources(data) {
       <article class="accordion-item">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
           <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
-          <span class="accordion-title">${escapeHTML(source.name)}</span>
+          <span class="accordion-title" title="${escapeHTML(source.name)}">
+            <span class="desktop-name">${escapeHTML(truncateText(source.name, 30))}</span>
+            <span class="mobile-name">${escapeHTML(source.name)}</span>
+          </span>
           <span class="accordion-amount">${escapeHTML(source.max_amount)}</span>
           <span class="accordion-column">
             <span class="column-label">Svårighetsgrad</span>
@@ -236,6 +239,7 @@ function renderSources(data) {
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
             <div class="detail-grid">
+              ${detail("Fullständigt namn", source.full_name || source.name)}
               ${detail("Ansökningsdatum", shortDeadline(source.deadline))}
               ${detail("Svårighetsgrad", source.difficulty)}
               ${detail("Land", source.country)}
@@ -368,12 +372,24 @@ function difficultyClass(value = "") {
 }
 
 function applicationDateBadge(value = "") {
+  if (isNominationDeadline(value)) {
+    return `<span class="date-empty" title="Se utfälld information">—</span>`;
+  }
   const label = shortDeadline(value);
   const timing = applicationDateTiming(value);
   const title = timing.days === null
     ? timing.description
     : `${timing.days} dagar kvar`;
   return `<span class="date-badge date-${timing.level}" title="${escapeHTML(title)}">${escapeHTML(label)}</span>`;
+}
+
+function isNominationDeadline(value = "") {
+  return /nominering|nomination/i.test(String(value));
+}
+
+function truncateText(value = "", maxLength = 30) {
+  const text = String(value);
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
 
 function applicationDateTiming(value = "") {

@@ -95,6 +95,7 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .funding-column-headings { display: grid; gap: 15px; padding: 0 20px 8px; color: #777f72; font-size: .67rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .accordion-header:hover { background: #fbfaf8; }
 .accordion-title { font-family: Lora, Georgia, serif; font-size: 1rem; font-weight: 700; }
+.mobile-name { display: none; }
 .accordion-amount { font-weight: 800; white-space: nowrap; }
 .accordion-meta { color: var(--muted); font-size: .82rem; white-space: nowrap; }
 .accordion-column { min-width: 0; color: var(--muted); font-size: .78rem; line-height: 1.35; }
@@ -109,6 +110,7 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .date-later { background: #dcfce7; color: #15803d; }
 .date-rolling { background: #dbeafe; color: #1d4ed8; }
 .date-unknown { background: #f3f4f6; color: #6b7280; }
+.date-empty { color: #a2a79e; font-weight: 700; }
 .accordion-chevron { color: var(--green); transition: transform .2s ease; }
 .accordion-item.open .accordion-chevron { transform: rotate(180deg); }
 .accordion-body { max-height: 0; overflow: hidden; transition: max-height .28s ease; }
@@ -178,6 +180,8 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
   .funding-list .accordion-header { grid-template-columns: 1fr auto 20px; }
   .accordion-header .badge { grid-column: 1 / -1; }
   .accordion-title { grid-column: 1; }
+  .desktop-name { display: none; }
+  .mobile-name { display: inline; }
   .accordion-amount { grid-column: 2; font-size: .84rem; }
   .accordion-chevron { grid-column: 3; }
   .accordion-column { grid-column: 1 / -1; }
