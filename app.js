@@ -239,7 +239,6 @@ function renderSources(data) {
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
             <div class="detail-grid">
-              ${detail("Fullständigt namn", source.full_name || source.name)}
               ${detail("Maxbelopp", source.max_amount)}
               ${detail("Ansökningsdatum", shortDeadline(source.deadline))}
               ${detail("Svårighetsgrad", source.difficulty)}
