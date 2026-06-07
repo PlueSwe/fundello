@@ -224,19 +224,19 @@ function renderSources(data) {
           <span class="accordion-title">${escapeHTML(source.name)}</span>
           <span class="accordion-amount">${escapeHTML(source.max_amount)}</span>
           <span class="accordion-column">
-            <span class="column-label">Ansökningsdatum / deadline</span>
-            <span>${escapeHTML(source.deadline)}</span>
+            <span class="column-label">Svårighetsgrad</span>
+            <span class="difficulty-badge difficulty-${difficultyClass(source.difficulty)}">${escapeHTML(source.difficulty)}</span>
           </span>
           <span class="accordion-column">
-            <span class="column-label">Svårighetsgrad</span>
-            <span>${escapeHTML(source.difficulty)}</span>
+            <span class="column-label">Ansökningsdatum / deadline</span>
+            <span>${escapeHTML(shortDeadline(source.deadline))}</span>
           </span>
           <span class="accordion-chevron" aria-hidden="true">⌄</span>
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
             <div class="detail-grid">
-              ${detail("Deadline", source.deadline)}
+              ${detail("Deadline", shortDeadline(source.deadline))}
               ${detail("Svårighetsgrad", source.difficulty)}
               ${detail("Land", source.country)}
             </div>
@@ -353,6 +353,18 @@ function bindAccordions(container) {
 
 function detail(label, value) {
   return `<div><span class="detail-label">${escapeHTML(label)}</span><span class="detail-value">${escapeHTML(value || "–")}</span></div>`;
+}
+
+function shortDeadline(value = "") {
+  const match = String(value).match(/^Se\s+([a-z0-9.-]+\.[a-z]{2,})(?:\/\S*)?\s+för\b/i);
+  return match ? `Se ${match[1]}` : value;
+}
+
+function difficultyClass(value = "") {
+  const normalized = String(value).toLocaleLowerCase("sv");
+  if (normalized.includes("låg") || normalized.includes("low")) return "low";
+  if (normalized.includes("hög") || normalized.includes("high")) return "high";
+  return "medium";
 }
 
 function formatDate(value) {

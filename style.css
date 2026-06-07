@@ -91,7 +91,7 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .accordion-list { display: grid; gap: 10px; }
 .accordion-item { overflow: hidden; }
 .accordion-header { width: 100%; display: grid; grid-template-columns: minmax(120px, auto) minmax(180px, 1fr) auto auto 24px; gap: 15px; align-items: center; border: 0; background: transparent; padding: 18px 20px; color: var(--ink); text-align: left; cursor: pointer; }
-.funding-list .accordion-header, .funding-column-headings { grid-template-columns: minmax(120px, auto) minmax(170px, 1fr) minmax(110px, auto) minmax(150px, .8fr) minmax(105px, auto) 24px; }
+.funding-list .accordion-header, .funding-column-headings { grid-template-columns: minmax(120px, 145px) minmax(210px, 1fr) minmax(130px, 150px) minmax(115px, 130px) minmax(170px, .9fr) 24px; }
 .funding-column-headings { display: grid; gap: 15px; padding: 0 20px 8px; color: #777f72; font-size: .67rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .accordion-header:hover { background: #fbfaf8; }
 .accordion-title { font-family: Lora, Georgia, serif; font-size: 1rem; font-weight: 700; }
@@ -99,6 +99,10 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .accordion-meta { color: var(--muted); font-size: .82rem; white-space: nowrap; }
 .accordion-column { min-width: 0; color: var(--muted); font-size: .78rem; line-height: 1.35; }
 .column-label { display: block; margin-bottom: 2px; color: #8a9185; font-size: .62rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.difficulty-badge { display: inline-flex; min-width: 66px; justify-content: center; border-radius: 999px; padding: 4px 9px; font-size: .7rem; font-weight: 800; }
+.difficulty-low { background: #dcfce7; color: #15803d; }
+.difficulty-medium { background: #fef3c7; color: #a16207; }
+.difficulty-high { background: #fee2e2; color: #b91c1c; }
 .accordion-chevron { color: var(--green); transition: transform .2s ease; }
 .accordion-item.open .accordion-chevron { transform: rotate(180deg); }
 .accordion-body { max-height: 0; overflow: hidden; transition: max-height .28s ease; }
