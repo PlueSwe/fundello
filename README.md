@@ -30,4 +30,5 @@ via FTP. Inloggningsuppgifterna lagras som GitHub Actions-secrets:
 - `FTP_SERVER`
 - `FTP_USERNAME`
 - `FTP_PASSWORD`
-- `FTP_PATH`
+
+Webbplatsen publiceras till `/public_html/`.
