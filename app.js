@@ -55,6 +55,7 @@ let categoryById = new Map();
 let activeCategory = "all";
 let activeStatus = "all";
 let appliedSourceIds = new Set();
+let localApplications = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   initMenu();
@@ -121,6 +122,7 @@ function formatSEK(value) {
 }
 
 function daysUntil(dateString) {
+  if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return Infinity;
   const target = new Date(`${dateString}T23:59:59`);
   return Math.ceil((target - new Date()) / 86400000);
 }
@@ -210,7 +212,8 @@ async function loadFundingSources() {
     sources = Array.isArray(data) ? data : data.sources;
     categories = Array.isArray(data) ? [] : data.categories;
     categoryById = new Map(categories.map(category => [category.id, category]));
-    appliedSourceIds = loadAppliedSourceIds();
+    localApplications = loadLocalApplications();
+    appliedSourceIds = new Set(localApplications.map(application => application.source_id));
     const filterOptions = [
       { id: "all", label: "Alla" },
       ...categories.map(category => ({ id: category.id, label: category.label }))
@@ -249,6 +252,7 @@ function renderSources(data) {
     const categoryLabel = category?.label || source.category;
     const badgeClass = category?.badge_class || CATEGORY_CLASSES[source.category] || "badge-statlig";
     const sourceName = displayName(source);
+    const localApplication = localApplications.find(application => application.source_id === source.id);
     return `
       <article class="accordion-item ${appliedSourceIds.has(source.id) ? "source-applied" : ""}" data-source-id="${escapeHTML(source.id)}">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
@@ -269,6 +273,14 @@ function renderSources(data) {
               <span>Ansökt</span>
               <small>Markera när ansökan är inskickad</small>
             </label>
+            <label class="applied-amount ${localApplication ? "visible" : ""}">
+              <span>Sökt belopp</span>
+              <span class="amount-input-wrap">
+                <input type="text" inputmode="numeric" autocomplete="off" data-applied-amount="${escapeHTML(source.id)}" value="${localApplication ? escapeHTML(String(localApplication.amount_value || "")) : ""}" placeholder="Exempel: 500 000">
+                <strong>SEK</strong>
+              </span>
+              <small>Beloppet används automatiskt i ansökningsöversikten.</small>
+            </label>
             <div class="detail-grid">
               ${detail("Maxbelopp", source.max_amount)}
               ${detail("Ansökningsdatum", shortDeadline(source.deadline))}
@@ -285,6 +297,8 @@ function renderSources(data) {
         </div>
       </article>`;
   }).join("");
+  bindLogoFallbacks(target);
+  bindAppliedControls(target);
   bindAccordions(target);
 }
 
@@ -302,7 +316,8 @@ async function loadApplications() {
   });
 
   try {
-    applications = await getJSON("applications.json");
+    const serverApplications = await getJSON("applications.json");
+    applications = mergeApplications(serverApplications, loadLocalApplications());
     renderKPIs(document.getElementById("application-kpis"), applications);
     renderDeadlineAlerts();
     renderApplications(applications);
@@ -365,8 +380,6 @@ function renderApplications(data) {
         </div>
       </article>`;
   }).join("");
-  bindLogoFallbacks(target);
-  bindAppliedCheckboxes(target);
   bindAccordions(target);
 }
 
@@ -483,32 +496,94 @@ function compactAmount(value = "") {
   return String(value).replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s{2,}/g, " ").trim();
 }
 
-function loadAppliedSourceIds() {
+function loadLocalApplications() {
   try {
-    const saved = JSON.parse(localStorage.getItem("fundello-applied-sources") || "[]");
-    return new Set(Array.isArray(saved) ? saved : []);
+    const saved = JSON.parse(localStorage.getItem("fundello-local-applications") || "[]");
+    if (Array.isArray(saved) && saved.length) return saved;
+
+    const legacyIds = JSON.parse(localStorage.getItem("fundello-applied-sources") || "[]");
+    if (!Array.isArray(legacyIds)) return [];
+    return legacyIds.map(sourceId => createLocalApplication(sourceId, 0)).filter(Boolean);
   } catch {
-    return new Set();
+    return [];
   }
 }
 
-function saveAppliedSourceIds() {
+function saveLocalApplications() {
   try {
-    localStorage.setItem("fundello-applied-sources", JSON.stringify([...appliedSourceIds]));
+    localStorage.setItem("fundello-local-applications", JSON.stringify(localApplications));
+    localStorage.removeItem("fundello-applied-sources");
   } catch {
     // The visual state still works for the current page if storage is unavailable.
   }
 }
 
-function bindAppliedCheckboxes(container) {
+function createLocalApplication(sourceId, amountValue) {
+  const source = sources.find(item => item.id === sourceId);
+  if (!source) return null;
+  const category = categoryById.get(source.category);
+  return {
+    id: `local-${source.id}`,
+    source_id: source.id,
+    funder_name: displayName(source),
+    category: category?.label || source.category,
+    amount: formatSEK(amountValue || 0),
+    amount_value: amountValue || 0,
+    applied_date: new Date().toISOString().slice(0, 10),
+    expected_response_date: "",
+    status: "applied",
+    notes: "Registrerad som ansökt i finansieringskatalogen."
+  };
+}
+
+function mergeApplications(serverApplications, localItems) {
+  const localIds = new Set(localItems.map(application => application.id));
+  return [
+    ...serverApplications.filter(application => !localIds.has(application.id)),
+    ...localItems
+  ];
+}
+
+function parseEnteredAmount(value = "") {
+  const digits = String(value).replace(/[^\d]/g, "");
+  return Number(digits) || 0;
+}
+
+function bindAppliedControls(container) {
   container.querySelectorAll("[data-applied-source]").forEach(checkbox => {
     checkbox.addEventListener("change", () => {
       const sourceId = checkbox.dataset.appliedSource;
       const item = checkbox.closest(".accordion-item");
-      if (checkbox.checked) appliedSourceIds.add(sourceId);
-      else appliedSourceIds.delete(sourceId);
+      const amountPanel = item.querySelector(".applied-amount");
+      const amountInput = item.querySelector("[data-applied-amount]");
+      if (checkbox.checked) {
+        appliedSourceIds.add(sourceId);
+        if (!localApplications.some(application => application.source_id === sourceId)) {
+          const application = createLocalApplication(sourceId, parseEnteredAmount(amountInput.value));
+          if (application) localApplications.push(application);
+        }
+        amountPanel.classList.add("visible");
+        amountInput.focus();
+      } else {
+        appliedSourceIds.delete(sourceId);
+        localApplications = localApplications.filter(application => application.source_id !== sourceId);
+        amountPanel.classList.remove("visible");
+      }
       item.classList.toggle("source-applied", checkbox.checked);
-      saveAppliedSourceIds();
+      saveLocalApplications();
+      const body = item.querySelector(".accordion-body");
+      if (item.classList.contains("open")) body.style.maxHeight = `${body.scrollHeight}px`;
+    });
+  });
+
+  container.querySelectorAll("[data-applied-amount]").forEach(input => {
+    input.addEventListener("input", () => {
+      const sourceId = input.dataset.appliedAmount;
+      const application = localApplications.find(item => item.source_id === sourceId);
+      if (!application) return;
+      application.amount_value = parseEnteredAmount(input.value);
+      application.amount = formatSEK(application.amount_value);
+      saveLocalApplications();
     });
   });
 }
