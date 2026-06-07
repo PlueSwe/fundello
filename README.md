@@ -21,6 +21,7 @@ Webbplatsen läser följande filer vid sidladdning:
 - `funding_sources.json`
 
 Filerna kan ersättas av agentsystemet utan att webbplatsen behöver byggas om.
+Botens motsvarande Python-konstanter finns i `bot/funding_sources.py`.
 
 ## Publicering
 

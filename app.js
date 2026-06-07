@@ -1,11 +1,5 @@
 "use strict";
 
-const CATEGORIES = [
-  "Alla", "Svensk statlig", "Svensk stiftelse", "Nordisk", "EU/Europa",
-  "FN/Multilateral", "Internationell stiftelse", "Teknik/CSR", "Finans/Bank",
-  "Kyrka/Trossamfund", "Lotteri/Insamling", "Forskning/Akademi", "Oväntad källa"
-];
-
 const STATUS_FILTERS = [
   ["Alla", "all"], ["Väntar", "applied"], ["Beviljat", "granted"],
   ["Avslaget", "rejected"], ["Försenat", "overdue"]
@@ -27,7 +21,9 @@ const STATUS_LABELS = {
 
 let sources = [];
 let applications = [];
-let activeCategory = "Alla";
+let categories = [];
+let categoryById = new Map();
+let activeCategory = "all";
 let activeStatus = "all";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -63,7 +59,8 @@ async function getJSON(path) {
 async function loadNavCount() {
   try {
     const data = await getJSON("funding_sources.json");
-    document.querySelectorAll("[data-source-count]").forEach(el => { el.textContent = data.length; });
+    const count = Array.isArray(data) ? data.length : data.sources.length;
+    document.querySelectorAll("[data-source-count]").forEach(el => { el.textContent = count; });
   } catch {
     document.querySelectorAll("[data-source-count]").forEach(el => { el.textContent = "–"; });
   }
@@ -169,9 +166,6 @@ async function loadNewsFeed() {
 
 async function loadFundingSources() {
   const filters = document.getElementById("category-filters");
-  filters.innerHTML = CATEGORIES.map(category => `
-    <button class="filter-chip ${category === "Alla" ? "active" : ""}" type="button" data-category="${escapeHTML(category)}">${escapeHTML(category)}</button>
-  `).join("");
   filters.addEventListener("click", event => {
     const button = event.target.closest("[data-category]");
     if (!button) return;
@@ -182,7 +176,17 @@ async function loadFundingSources() {
   document.getElementById("source-search").addEventListener("input", filterSources);
 
   try {
-    sources = await getJSON("funding_sources.json");
+    const data = await getJSON("funding_sources.json");
+    sources = Array.isArray(data) ? data : data.sources;
+    categories = Array.isArray(data) ? [] : data.categories;
+    categoryById = new Map(categories.map(category => [category.id, category]));
+    const filterOptions = [
+      { id: "all", label: "Alla" },
+      ...categories.map(category => ({ id: category.id, label: category.label }))
+    ];
+    filters.innerHTML = filterOptions.map(category => `
+      <button class="filter-chip ${category.id === "all" ? "active" : ""}" type="button" data-category="${escapeHTML(category.id)}">${escapeHTML(category.label)}</button>
+    `).join("");
     renderSources(sources);
   } catch {
     document.getElementById("funding-list").innerHTML = errorMessage("Kunde inte läsa funding_sources.json.");
@@ -193,8 +197,9 @@ async function loadFundingSources() {
 function filterSources() {
   const term = document.getElementById("source-search").value.trim().toLocaleLowerCase("sv");
   const result = sources.filter(source => {
-    const categoryMatch = activeCategory === "Alla" || source.category === activeCategory;
-    const haystack = `${source.name} ${source.country} ${source.category}`.toLocaleLowerCase("sv");
+    const category = categoryById.get(source.category);
+    const categoryMatch = activeCategory === "all" || source.category === activeCategory;
+    const haystack = `${source.name} ${source.full_name || ""} ${source.country} ${category?.label || source.category}`.toLocaleLowerCase("sv");
     return categoryMatch && (!term || haystack.includes(term));
   });
   renderSources(result);
@@ -209,11 +214,13 @@ function renderSources(data) {
   }
   target.innerHTML = data.map(source => {
     const id = `source-${escapeHTML(source.id)}`;
-    const badgeClass = CATEGORY_CLASSES[source.category] || "badge-statlig";
+    const category = categoryById.get(source.category);
+    const categoryLabel = category?.label || source.category;
+    const badgeClass = category?.badge_class || CATEGORY_CLASSES[source.category] || "badge-statlig";
     return `
       <article class="accordion-item">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
-          <span class="badge ${badgeClass}">${escapeHTML(source.category)}</span>
+          <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
           <span class="accordion-title">${escapeHTML(source.name)}</span>
           <span class="accordion-amount">${escapeHTML(source.max_amount)}</span>
           <span class="accordion-meta">${source.is_recurring ? "↻ Återkommande" : escapeHTML(source.deadline)}</span>
