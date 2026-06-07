@@ -225,7 +225,7 @@ function renderSources(data) {
             <span class="desktop-name">${escapeHTML(truncateText(source.name, 30))}</span>
             <span class="mobile-name">${escapeHTML(source.name)}</span>
           </span>
-          <span class="accordion-amount">${escapeHTML(source.max_amount)}</span>
+          <span class="accordion-amount" title="${escapeHTML(source.max_amount)}">${escapeHTML(compactAmount(source.max_amount))}</span>
           <span class="accordion-column">
             <span class="column-label">Svårighetsgrad</span>
             <span class="difficulty-badge difficulty-${difficultyClass(source.difficulty)}">${escapeHTML(source.difficulty)}</span>
@@ -240,6 +240,7 @@ function renderSources(data) {
           <div class="accordion-content">
             <div class="detail-grid">
               ${detail("Fullständigt namn", source.full_name || source.name)}
+              ${detail("Maxbelopp", source.max_amount)}
               ${detail("Ansökningsdatum", shortDeadline(source.deadline))}
               ${detail("Svårighetsgrad", source.difficulty)}
               ${detail("Land", source.country)}
@@ -390,6 +391,10 @@ function isNominationDeadline(value = "") {
 function truncateText(value = "", maxLength = 30) {
   const text = String(value);
   return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
+}
+
+function compactAmount(value = "") {
+  return String(value).replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s{2,}/g, " ").trim();
 }
 
 function applicationDateTiming(value = "") {
