@@ -95,7 +95,6 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .funding-column-headings { display: grid; gap: 15px; padding: 0 20px 8px; color: #777f72; font-size: .67rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .accordion-header:hover { background: #fbfaf8; }
 .accordion-title { font-family: Lora, Georgia, serif; font-size: 1rem; font-weight: 700; }
-.mobile-name { display: none; }
 .source-logo { position: relative; display: grid; width: 34px; height: 34px; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
 .source-logo img { position: relative; z-index: 1; width: 28px; height: 28px; object-fit: contain; opacity: 0; transition: opacity .16s ease; }
 .source-logo.loaded img { opacity: 1; }
@@ -193,8 +192,6 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
   .funding-list .badge { grid-column: 2 / 4; grid-row: 1; }
   .accordion-title { grid-column: 1; }
   .funding-list .accordion-title { grid-column: 1 / 3; grid-row: 2; }
-  .desktop-name { display: none; }
-  .mobile-name { display: inline; }
   .accordion-amount { grid-column: 2; font-size: .84rem; }
   .funding-list .accordion-amount { grid-column: 1 / 3; grid-row: 3; }
   .accordion-chevron { grid-column: 3; }

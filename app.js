@@ -14,6 +14,35 @@ const CATEGORY_CLASSES = {
   "Forskning/Akademi": "badge-forskning", "Oväntad källa": "badge-ovaentad"
 };
 
+const DISPLAY_NAMES = {
+  "sida-civil": "Sida",
+  socialstyrelsen: "Socialstyrelsen",
+  bra: "Brottsförebyggande rådet",
+  migrationsverket: "Migrationsverket",
+  "skandia-ideas": "Idéer för livet",
+  "svenska-spel-gras": "Svenska Spel",
+  "radda-barnen-fond": "Rädda Barnen",
+  "eu-cerv": "CERV",
+  "esf-plus": "ESF+",
+  "coe-human-rights": "Europarådet",
+  "eu-solidarity-corps": "European Solidarity Corps",
+  "unicef-partnership": "UNICEF",
+  "unodc-trafficking": "UNODC",
+  ohchr: "OHCHR",
+  "un-women": "UN Women",
+  ciff: "CIFF",
+  "meta-safety": "Meta",
+  "apple-giving": "Apple",
+  "folksam-trygga": "Folksam",
+  "svenska-kyrkan-int": "Svenska kyrkan",
+  fralsningsarmen: "Frälsningsarmén",
+  vinnova: "Vinnova",
+  "rotary-foundation": "Rotary Foundation",
+  "lions-foundation": "Lions Clubs",
+  ashoka: "Ashoka",
+  kriminalvarden: "Kriminalvården"
+};
+
 const STATUS_LABELS = {
   applied: "⏳ Väntar", granted: "✓ Beviljat",
   rejected: "× Avslaget", overdue: "⚠ Försenat"
@@ -217,15 +246,13 @@ function renderSources(data) {
     const category = categoryById.get(source.category);
     const categoryLabel = category?.label || source.category;
     const badgeClass = category?.badge_class || CATEGORY_CLASSES[source.category] || "badge-statlig";
+    const sourceName = displayName(source);
     return `
       <article class="accordion-item">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
           ${logoMarkup(source)}
           <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
-          <span class="accordion-title" title="${escapeHTML(source.name)}">
-            <span class="desktop-name">${escapeHTML(truncateText(source.name, 30))}</span>
-            <span class="mobile-name">${escapeHTML(source.name)}</span>
-          </span>
+          <span class="accordion-title" title="${escapeHTML(sourceName)}">${escapeHTML(truncateText(sourceName, 30))}</span>
           <span class="accordion-amount" title="${escapeHTML(source.max_amount)}">${escapeHTML(compactAmount(source.max_amount))}</span>
           <span class="accordion-column">
             <span class="column-label">Svårighetsgrad</span>
@@ -340,8 +367,7 @@ function renderApplications(data) {
 }
 
 function logoMarkup(source) {
-  const initials = String(source.name)
-    .replace(/[—–-].*$/, "")
+  const initials = displayName(source)
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -353,6 +379,10 @@ function logoMarkup(source) {
       <img src="assets/logos/${logoFileName(source.id)}.png" alt="" loading="lazy" width="32" height="32">
       <span class="source-logo-fallback" aria-hidden="true">${escapeHTML(initials || "•")}</span>
     </span>`;
+}
+
+function displayName(source) {
+  return DISPLAY_NAMES[source.id] || String(source.name).split(/\s+[—–]\s+/)[0];
 }
 
 function logoFileName(value = "") {
