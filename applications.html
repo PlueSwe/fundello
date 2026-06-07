@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Följ Global Child Foundations finansieringsansökningar.">
+  <title>Fundello | Ansökningar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body data-page="applications">
+  <header class="site-header">
+    <nav class="nav container" aria-label="Huvudnavigation">
+      <a class="brand" href="index.html"><span>◆</span> fundello</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-links">Meny</button>
+      <div class="nav-links" id="nav-links">
+        <a href="index.html">Översikt</a>
+        <a href="funding.html">Finansiering <span class="nav-count" data-source-count>–</span></a>
+        <a class="active" href="applications.html">Ansökningar</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container page-main">
+    <div class="page-intro">
+      <p class="eyebrow">Pipeline</p>
+      <h1>Ansökningsspåraren</h1>
+      <p>En samlad bild av inskickade ansökningar, besked och nästa åtgärd.</p>
+    </div>
+
+    <section class="kpi-grid" id="application-kpis" aria-label="Nyckeltal">
+      <div class="skeleton card"></div><div class="skeleton card"></div>
+      <div class="skeleton card"></div><div class="skeleton card"></div>
+    </section>
+    <div id="deadline-alerts" aria-live="polite"></div>
+
+    <section class="filter-panel compact" aria-label="Filtrera ansökningar">
+      <div class="filter-chips" id="status-filters"></div>
+      <p class="result-count" id="application-count">Laddar ansökningar...</p>
+    </section>
+
+    <section class="accordion-list" id="application-list" aria-live="polite"></section>
+    <noscript><p class="notice">JavaScript behövs för att läsa ansökningsdata.</p></noscript>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-inner"><span>◆ fundello</span><span>Global Child Foundation</span></div></footer>
+</body>
+</html>

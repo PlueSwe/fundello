@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Utforska finansieringskällor för Global Child Foundation.">
+  <title>Fundello | Finansiering</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body data-page="funding">
+  <header class="site-header">
+    <nav class="nav container" aria-label="Huvudnavigation">
+      <a class="brand" href="index.html"><span>◆</span> fundello</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-links">Meny</button>
+      <div class="nav-links" id="nav-links">
+        <a href="index.html">Översikt</a>
+        <a class="active" href="funding.html">Finansiering <span class="nav-count" data-source-count>–</span></a>
+        <a href="applications.html">Ansökningar</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container page-main">
+    <div class="page-intro">
+      <p class="eyebrow">Möjligheter</p>
+      <h1>Hitta rätt finansiering</h1>
+      <p>Filtrera bland stiftelser, offentliga program och internationella partners.</p>
+    </div>
+
+    <section class="filter-panel" aria-label="Filtrera finansieringskällor">
+      <label class="search-wrap">
+        <span class="sr-only">Sök finansieringskälla</span>
+        <span aria-hidden="true">⌕</span>
+        <input id="source-search" type="search" placeholder="Sök på namn, land eller kategori..." autocomplete="off">
+      </label>
+      <div class="filter-chips" id="category-filters"></div>
+      <p class="result-count" id="source-count">Laddar finansieringskällor...</p>
+    </section>
+
+    <section class="accordion-list" id="funding-list" aria-live="polite">
+      <div class="skeleton accordion-item"></div><div class="skeleton accordion-item"></div>
+    </section>
+    <noscript><p class="notice">JavaScript behövs för att läsa och filtrera JSON-filen.</p></noscript>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-inner"><span>◆ fundello</span><span>Global Child Foundation</span></div></footer>
+</body>
+</html>

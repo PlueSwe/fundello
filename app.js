@@ -1,0 +1,355 @@
+"use strict";
+
+const CATEGORIES = [
+  "Alla", "Svensk statlig", "Svensk stiftelse", "Nordisk", "EU/Europa",
+  "FN/Multilateral", "Internationell stiftelse", "Teknik/CSR", "Finans/Bank",
+  "Kyrka/Trossamfund", "Lotteri/Insamling", "Forskning/Akademi", "Oväntad källa"
+];
+
+const STATUS_FILTERS = [
+  ["Alla", "all"], ["Väntar", "applied"], ["Beviljat", "granted"],
+  ["Avslaget", "rejected"], ["Försenat", "overdue"]
+];
+
+const CATEGORY_CLASSES = {
+  "Svensk statlig": "badge-statlig", "Svensk stiftelse": "badge-stiftelse",
+  "Nordisk": "badge-nordisk", "EU/Europa": "badge-eu",
+  "FN/Multilateral": "badge-fn", "Internationell stiftelse": "badge-intl",
+  "Teknik/CSR": "badge-teknik", "Finans/Bank": "badge-finans",
+  "Kyrka/Trossamfund": "badge-kyrka", "Lotteri/Insamling": "badge-lotteri",
+  "Forskning/Akademi": "badge-forskning", "Oväntad källa": "badge-ovaentad"
+};
+
+const STATUS_LABELS = {
+  applied: "⏳ Väntar", granted: "✓ Beviljat",
+  rejected: "× Avslaget", overdue: "⚠ Försenat"
+};
+
+let sources = [];
+let applications = [];
+let activeCategory = "Alla";
+let activeStatus = "all";
+
+document.addEventListener("DOMContentLoaded", () => {
+  initMenu();
+  loadNavCount();
+  const page = document.body.dataset.page;
+  if (page === "home") {
+    loadNewsFeed();
+    loadHomeKPIs();
+  } else if (page === "funding") {
+    loadFundingSources();
+  } else if (page === "applications") {
+    loadApplications();
+  }
+});
+
+function initMenu() {
+  const button = document.querySelector(".menu-toggle");
+  const links = document.querySelector(".nav-links");
+  if (!button || !links) return;
+  button.addEventListener("click", () => {
+    const isOpen = links.classList.toggle("open");
+    button.setAttribute("aria-expanded", String(isOpen));
+  });
+}
+
+async function getJSON(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`${path}: ${response.status}`);
+  return response.json();
+}
+
+async function loadNavCount() {
+  try {
+    const data = await getJSON("funding_sources.json");
+    document.querySelectorAll("[data-source-count]").forEach(el => { el.textContent = data.length; });
+  } catch {
+    document.querySelectorAll("[data-source-count]").forEach(el => { el.textContent = "–"; });
+  }
+}
+
+function escapeHTML(value = "") {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  })[char]);
+}
+
+function safeURL(value = "") {
+  try {
+    const url = new URL(value, window.location.href);
+    return ["http:", "https:", "mailto:"].includes(url.protocol) ? url.href : "#";
+  } catch {
+    return "#";
+  }
+}
+
+function parseAmount(value) {
+  const digits = String(value || "").replace(/[^\d]/g, "");
+  return Number(digits) || 0;
+}
+
+function formatSEK(value) {
+  return `${new Intl.NumberFormat("sv-SE").format(value)} SEK`;
+}
+
+function daysUntil(dateString) {
+  const target = new Date(`${dateString}T23:59:59`);
+  return Math.ceil((target - new Date()) / 86400000);
+}
+
+function effectiveStatus(app) {
+  if (app.status === "applied" && daysUntil(app.expected_response_date) < 0) return "overdue";
+  return app.status;
+}
+
+function timeAgo(isoString) {
+  const diffSeconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+  if (diffSeconds < 60) return "nyss";
+  if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)} min sedan`;
+  if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)} timmar sedan`;
+  if (diffSeconds < 172800) return "igår";
+  if (diffSeconds < 604800) return `${Math.floor(diffSeconds / 86400)} dagar sedan`;
+  return new Intl.DateTimeFormat("sv-SE", { dateStyle: "medium" }).format(new Date(isoString));
+}
+
+function renderKPIs(target, apps) {
+  const total = apps.reduce((sum, app) => sum + parseAmount(app.amount), 0);
+  const granted = apps.filter(app => app.status === "granted").reduce((sum, app) => sum + parseAmount(app.amount), 0);
+  const active = apps.filter(app => app.status === "applied").length;
+  const action = apps.filter(app => app.status === "applied" && daysUntil(app.expected_response_date) <= 14).length;
+  const cards = [
+    ["Σ", "Totalt sökt", formatSEK(total)],
+    ["✓", "Beviljat", formatSEK(granted)],
+    ["→", "Aktiva ansökningar", String(active)],
+    ["!", "Behöver åtgärd", String(action)]
+  ];
+  target.innerHTML = cards.map(([icon, label, value]) => `
+    <article class="card kpi-card">
+      <span class="kpi-icon">${icon}</span>
+      <span class="kpi-label">${label}</span>
+      <strong class="kpi-value">${value}</strong>
+    </article>`).join("");
+}
+
+async function loadHomeKPIs() {
+  const target = document.getElementById("home-kpis");
+  try {
+    renderKPIs(target, await getJSON("applications.json"));
+  } catch {
+    target.innerHTML = errorMessage("Kunde inte läsa applications.json.");
+  }
+}
+
+async function loadNewsFeed() {
+  const target = document.getElementById("news-feed");
+  const iconMap = { agent_analysis: "◇", application_update: "▤", deadline_alert: "!" };
+  try {
+    const news = (await getJSON("news.json"))
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 10);
+    if (!news.length) {
+      target.innerHTML = emptyMessage("Inga händelser att visa ännu.");
+      return;
+    }
+    target.innerHTML = news.map(item => `
+      <article class="news-card">
+        <span class="news-icon" aria-hidden="true">${iconMap[item.type] || "·"}</span>
+        <div class="news-content">
+          <h3>${escapeHTML(item.title)}</h3>
+          <p>${escapeHTML(item.summary)}</p>
+          <span class="agent-label">${escapeHTML(item.agent || "system")}</span>
+        </div>
+        <time class="news-meta" datetime="${escapeHTML(item.timestamp)}">${timeAgo(item.timestamp)}</time>
+      </article>`).join("");
+  } catch {
+    target.innerHTML = errorMessage("Kunde inte läsa news.json.");
+  }
+}
+
+async function loadFundingSources() {
+  const filters = document.getElementById("category-filters");
+  filters.innerHTML = CATEGORIES.map(category => `
+    <button class="filter-chip ${category === "Alla" ? "active" : ""}" type="button" data-category="${escapeHTML(category)}">${escapeHTML(category)}</button>
+  `).join("");
+  filters.addEventListener("click", event => {
+    const button = event.target.closest("[data-category]");
+    if (!button) return;
+    activeCategory = button.dataset.category;
+    filters.querySelectorAll(".filter-chip").forEach(el => el.classList.toggle("active", el === button));
+    filterSources();
+  });
+  document.getElementById("source-search").addEventListener("input", filterSources);
+
+  try {
+    sources = await getJSON("funding_sources.json");
+    renderSources(sources);
+  } catch {
+    document.getElementById("funding-list").innerHTML = errorMessage("Kunde inte läsa funding_sources.json.");
+    document.getElementById("source-count").textContent = "Ingen data tillgänglig";
+  }
+}
+
+function filterSources() {
+  const term = document.getElementById("source-search").value.trim().toLocaleLowerCase("sv");
+  const result = sources.filter(source => {
+    const categoryMatch = activeCategory === "Alla" || source.category === activeCategory;
+    const haystack = `${source.name} ${source.country} ${source.category}`.toLocaleLowerCase("sv");
+    return categoryMatch && (!term || haystack.includes(term));
+  });
+  renderSources(result);
+}
+
+function renderSources(data) {
+  const target = document.getElementById("funding-list");
+  document.getElementById("source-count").textContent = `${data.length} av ${sources.length} källor`;
+  if (!data.length) {
+    target.innerHTML = emptyMessage("Inga finansieringskällor matchar filtret.");
+    return;
+  }
+  target.innerHTML = data.map(source => {
+    const id = `source-${escapeHTML(source.id)}`;
+    const badgeClass = CATEGORY_CLASSES[source.category] || "badge-statlig";
+    return `
+      <article class="accordion-item">
+        <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
+          <span class="badge ${badgeClass}">${escapeHTML(source.category)}</span>
+          <span class="accordion-title">${escapeHTML(source.name)}</span>
+          <span class="accordion-amount">${escapeHTML(source.max_amount)}</span>
+          <span class="accordion-meta">${source.is_recurring ? "↻ Återkommande" : escapeHTML(source.deadline)}</span>
+          <span class="accordion-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="accordion-body" id="${id}">
+          <div class="accordion-content">
+            <div class="detail-grid">
+              ${detail("Deadline", source.deadline)}
+              ${detail("Svårighetsgrad", source.difficulty)}
+              ${detail("Land", source.country)}
+            </div>
+            <div class="detail-block"><h4>Behörighet</h4><p>${escapeHTML(source.eligibility)}</p></div>
+            <div class="detail-block"><h4>Strategiskt tips</h4><p>${escapeHTML(source.tip)}</p></div>
+            <div class="action-row">
+              ${source.contact_email ? `<a href="mailto:${escapeHTML(source.contact_email)}">✉ ${escapeHTML(source.contact_email)}</a>` : ""}
+              ${source.contact_url ? `<a href="${safeURL(source.contact_url)}" target="_blank" rel="noopener noreferrer">Öppna ansökningssida ↗</a>` : ""}
+            </div>
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+  bindAccordions(target);
+}
+
+async function loadApplications() {
+  const filters = document.getElementById("status-filters");
+  filters.innerHTML = STATUS_FILTERS.map(([label, value]) => `
+    <button class="filter-chip ${value === "all" ? "active" : ""}" type="button" data-status="${value}">${label}</button>
+  `).join("");
+  filters.addEventListener("click", event => {
+    const button = event.target.closest("[data-status]");
+    if (!button) return;
+    activeStatus = button.dataset.status;
+    filters.querySelectorAll(".filter-chip").forEach(el => el.classList.toggle("active", el === button));
+    filterApplications();
+  });
+
+  try {
+    applications = await getJSON("applications.json");
+    renderKPIs(document.getElementById("application-kpis"), applications);
+    renderDeadlineAlerts();
+    renderApplications(applications);
+  } catch {
+    document.getElementById("application-kpis").innerHTML = errorMessage("Kunde inte läsa applications.json.");
+    document.getElementById("application-count").textContent = "Ingen data tillgänglig";
+  }
+}
+
+function renderDeadlineAlerts() {
+  const upcoming = applications
+    .filter(app => app.status === "applied" && daysUntil(app.expected_response_date) <= 14)
+    .sort((a, b) => daysUntil(a.expected_response_date) - daysUntil(b.expected_response_date));
+  const target = document.getElementById("deadline-alerts");
+  if (!upcoming.length) {
+    target.innerHTML = "";
+    return;
+  }
+  const app = upcoming[0];
+  const days = daysUntil(app.expected_response_date);
+  const timing = days < 0 ? `${Math.abs(days)} dagar försenad` : days === 0 ? "idag" : `${days} dagar kvar`;
+  target.innerHTML = `<div class="alert"><span aria-hidden="true">!</span><span>Dags att följa upp! — ${escapeHTML(app.funder_name)} (${timing})</span></div>`;
+}
+
+function filterApplications() {
+  const result = activeStatus === "all"
+    ? applications
+    : applications.filter(app => effectiveStatus(app) === activeStatus);
+  renderApplications(result);
+}
+
+function renderApplications(data) {
+  const target = document.getElementById("application-list");
+  document.getElementById("application-count").textContent = `${data.length} av ${applications.length} ansökningar`;
+  if (!data.length) {
+    target.innerHTML = emptyMessage("Inga ansökningar matchar filtret.");
+    return;
+  }
+  target.innerHTML = data.map(app => {
+    const status = effectiveStatus(app);
+    const id = `application-${escapeHTML(app.id)}`;
+    return `
+      <article class="accordion-item">
+        <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
+          <span class="badge status-${status}">${STATUS_LABELS[status] || status}</span>
+          <span class="accordion-title">${escapeHTML(app.funder_name)}</span>
+          <span class="accordion-amount">${escapeHTML(app.amount)}</span>
+          <span class="accordion-meta">Svar: ${formatDate(app.expected_response_date)}</span>
+          <span class="accordion-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="accordion-body" id="${id}">
+          <div class="accordion-content">
+            <div class="detail-grid">
+              ${detail("Ansökt", formatDate(app.applied_date))}
+              ${detail("Förväntat svar", formatDate(app.expected_response_date))}
+              ${detail("Kategori", app.category)}
+            </div>
+            <div class="detail-block"><h4>Anteckningar</h4><p>${escapeHTML(app.notes || "Inga anteckningar.")}</p></div>
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+  bindAccordions(target);
+}
+
+function bindAccordions(container) {
+  container.querySelectorAll(".accordion-header").forEach(header => {
+    header.addEventListener("click", () => {
+      const item = header.closest(".accordion-item");
+      const body = document.getElementById(header.getAttribute("aria-controls"));
+      const open = !item.classList.contains("open");
+      container.querySelectorAll(".accordion-item.open").forEach(other => {
+        other.classList.remove("open");
+        other.querySelector(".accordion-header").setAttribute("aria-expanded", "false");
+        other.querySelector(".accordion-body").style.maxHeight = null;
+      });
+      item.classList.toggle("open", open);
+      header.setAttribute("aria-expanded", String(open));
+      body.style.maxHeight = open ? `${body.scrollHeight}px` : null;
+    });
+  });
+}
+
+function detail(label, value) {
+  return `<div><span class="detail-label">${escapeHTML(label)}</span><span class="detail-value">${escapeHTML(value || "–")}</span></div>`;
+}
+
+function formatDate(value) {
+  if (!value) return "–";
+  return new Intl.DateTimeFormat("sv-SE", { year: "numeric", month: "short", day: "numeric" }).format(new Date(`${value}T12:00:00`));
+}
+
+function emptyMessage(message) {
+  return `<div class="empty-state">${escapeHTML(message)}</div>`;
+}
+
+function errorMessage(message) {
+  return `<div class="error-state">${escapeHTML(message)} Starta sidan via en lokal HTTP-server, inte direkt som en fil.</div>`;
+}
