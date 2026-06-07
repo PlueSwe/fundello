@@ -1,6 +1,7 @@
 # Fundello
 
 Statisk webbplats för Global Child Foundations finansieringsarbete.
+Finansieringskatalogen ligger på startsidan `index.html`.
 
 ## Lokal utveckling
 

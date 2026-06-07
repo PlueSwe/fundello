@@ -223,7 +223,14 @@ function renderSources(data) {
           <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
           <span class="accordion-title">${escapeHTML(source.name)}</span>
           <span class="accordion-amount">${escapeHTML(source.max_amount)}</span>
-          <span class="accordion-meta">${source.is_recurring ? "↻ Återkommande" : escapeHTML(source.deadline)}</span>
+          <span class="accordion-column">
+            <span class="column-label">Ansökningsdatum / deadline</span>
+            <span>${escapeHTML(source.deadline)}</span>
+          </span>
+          <span class="accordion-column">
+            <span class="column-label">Svårighetsgrad</span>
+            <span>${escapeHTML(source.difficulty)}</span>
+          </span>
           <span class="accordion-chevron" aria-hidden="true">⌄</span>
         </button>
         <div class="accordion-body" id="${id}">

@@ -3,66 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Fundello samlar finansieringsmöjligheter och ansökningar för Global Child Foundation.">
-  <title>Fundello | Översikt</title>
+  <meta name="description" content="Utforska finansieringskällor för Global Child Foundation.">
+  <title>Fundello | Finansiering</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
-<body data-page="home">
+<body data-page="funding">
   <header class="site-header">
     <nav class="nav container" aria-label="Huvudnavigation">
-      <a class="brand" href="index.html" aria-label="Fundello startsida"><span>◆</span> fundello</a>
+      <a class="brand" href="index.html"><span>◆</span> fundello</a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-links">Meny</button>
       <div class="nav-links" id="nav-links">
-        <a class="active" href="index.html">Översikt</a>
-        <a href="funding.html">Finansiering <span class="nav-count" data-source-count>–</span></a>
+        <a class="active" href="index.html">Finansiering <span class="nav-count" data-source-count>–</span></a>
         <a href="applications.html">Ansökningar</a>
       </div>
     </nav>
   </header>
 
-  <main>
-    <section class="hero container">
-      <p class="eyebrow">Global Child Foundation</p>
-      <h1>Finansiering som blir till förändring.</h1>
-      <p class="hero-copy">Följ arbetet, se aktuella ansökningar och utforska vägarna till nästa finansierade insats.</p>
+  <main class="container page-main">
+    <div class="page-intro">
+      <p class="eyebrow">Möjligheter</p>
+      <h1>Hitta rätt finansiering</h1>
+      <p>Filtrera bland stiftelser, offentliga program och internationella partners.</p>
+    </div>
+
+    <section class="filter-panel" aria-label="Filtrera finansieringskällor">
+      <label class="search-wrap">
+        <span class="sr-only">Sök finansieringskälla</span>
+        <span aria-hidden="true">⌕</span>
+        <input id="source-search" type="search" placeholder="Sök på namn, land eller kategori..." autocomplete="off">
+      </label>
+      <div class="filter-chips" id="category-filters"></div>
+      <p class="result-count" id="source-count">Laddar finansieringskällor...</p>
     </section>
 
-    <section class="container section">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Lägesbild</p>
-          <h2>Ansökningsöversikt</h2>
-        </div>
-        <a class="text-link" href="applications.html">Se alla ansökningar →</a>
-      </div>
-      <div class="kpi-grid" id="home-kpis" aria-live="polite">
-        <div class="skeleton card"></div><div class="skeleton card"></div>
-        <div class="skeleton card"></div><div class="skeleton card"></div>
-      </div>
+    <div class="funding-column-headings" aria-hidden="true">
+      <span>Kategori</span>
+      <span>Finansieringskälla</span>
+      <span>Maxbelopp</span>
+      <span>Ansökningsdatum / deadline</span>
+      <span>Svårighetsgrad</span>
+      <span></span>
+    </div>
+    <section class="accordion-list funding-list" id="funding-list" aria-live="polite">
+      <div class="skeleton accordion-item"></div><div class="skeleton accordion-item"></div>
     </section>
-
-    <section class="container section">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Senaste nytt</p>
-          <h2>Aktivitet i agentsystemet</h2>
-        </div>
-      </div>
-      <div class="news-list" id="news-feed" aria-live="polite">
-        <div class="skeleton news-card"></div><div class="skeleton news-card"></div>
-      </div>
-    </section>
+    <noscript><p class="notice">JavaScript behövs för att läsa och filtrera JSON-filen.</p></noscript>
   </main>
 
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <span>◆ fundello</span>
-      <span>Ett publikt finansieringsfönster för Global Child Foundation.</span>
-    </div>
-  </footer>
+  <footer class="site-footer"><div class="container footer-inner"><span>◆ fundello</span><span>Global Child Foundation</span></div></footer>
 </body>
 </html>
