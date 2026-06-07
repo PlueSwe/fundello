@@ -220,6 +220,7 @@ function renderSources(data) {
     return `
       <article class="accordion-item">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
+          ${logoMarkup(source)}
           <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
           <span class="accordion-title" title="${escapeHTML(source.name)}">
             <span class="desktop-name">${escapeHTML(truncateText(source.name, 30))}</span>
@@ -334,7 +335,46 @@ function renderApplications(data) {
         </div>
       </article>`;
   }).join("");
+  bindLogoFallbacks(target);
   bindAccordions(target);
+}
+
+function logoMarkup(source) {
+  const initials = String(source.name)
+    .replace(/[—–-].*$/, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join("")
+    .toLocaleUpperCase("sv");
+  return `
+    <span class="source-logo">
+      <img src="assets/logos/${logoFileName(source.id)}.png" alt="" loading="lazy" width="32" height="32">
+      <span class="source-logo-fallback" aria-hidden="true">${escapeHTML(initials || "•")}</span>
+    </span>`;
+}
+
+function logoFileName(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLocaleLowerCase("en");
+}
+
+function bindLogoFallbacks(container) {
+  container.querySelectorAll(".source-logo img").forEach(image => {
+    const logo = image.closest(".source-logo");
+    if (image.complete && image.naturalWidth > 0) {
+      logo.classList.add("loaded");
+      return;
+    }
+    image.addEventListener("load", () => logo.classList.add("loaded"), { once: true });
+    image.addEventListener("error", () => image.remove(), { once: true });
+  });
 }
 
 function bindAccordions(container) {
