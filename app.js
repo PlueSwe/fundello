@@ -251,17 +251,12 @@ function renderSources(data) {
       <article class="accordion-item">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
           ${logoMarkup(source)}
-          <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
           <span class="accordion-title" title="${escapeHTML(sourceName)}">${escapeHTML(truncateText(sourceName, 30))}</span>
-          <span class="accordion-amount" title="${escapeHTML(source.max_amount)}">${escapeHTML(compactAmount(source.max_amount))}</span>
           <span class="accordion-column">
-            <span class="column-label">Svårighetsgrad</span>
             <span class="difficulty-badge difficulty-${difficultyClass(source.difficulty)}">${escapeHTML(source.difficulty)}</span>
           </span>
-          <span class="accordion-column">
-            <span class="column-label">Ansökningsdatum</span>
-            ${applicationDateBadge(source.deadline)}
-          </span>
+          <span class="accordion-amount" title="${escapeHTML(source.max_amount)}">${escapeHTML(compactAmount(source.max_amount))}</span>
+          <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
           <span class="accordion-chevron" aria-hidden="true">⌄</span>
         </button>
         <div class="accordion-body" id="${id}">
@@ -376,7 +371,7 @@ function logoMarkup(source) {
     .toLocaleUpperCase("sv");
   return `
     <span class="source-logo">
-      <img src="assets/logos/${logoFileName(source.id)}.png" alt="" loading="lazy" width="32" height="32">
+      <img src="assets/logos/${logoFileName(source.id)}.png" alt="" width="32" height="32">
       <span class="source-logo-fallback" aria-hidden="true">${escapeHTML(initials || "•")}</span>
     </span>`;
 }
@@ -398,12 +393,20 @@ function logoFileName(value = "") {
 function bindLogoFallbacks(container) {
   container.querySelectorAll(".source-logo img").forEach(image => {
     const logo = image.closest(".source-logo");
-    if (image.complete && image.naturalWidth > 0) {
+    const showImage = () => {
+      image.hidden = false;
       logo.classList.add("loaded");
-      return;
+    };
+    const showFallback = () => {
+      logo.classList.remove("loaded");
+      image.hidden = true;
+    };
+    image.addEventListener("load", showImage, { once: true });
+    image.addEventListener("error", showFallback, { once: true });
+    if (image.complete) {
+      if (image.naturalWidth > 0) showImage();
+      else showFallback();
     }
-    image.addEventListener("load", () => logo.classList.add("loaded"), { once: true });
-    image.addEventListener("error", () => image.remove(), { once: true });
   });
 }
 
