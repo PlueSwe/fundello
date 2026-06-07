@@ -228,15 +228,15 @@ function renderSources(data) {
             <span class="difficulty-badge difficulty-${difficultyClass(source.difficulty)}">${escapeHTML(source.difficulty)}</span>
           </span>
           <span class="accordion-column">
-            <span class="column-label">Ansökningsdatum / deadline</span>
-            <span>${escapeHTML(shortDeadline(source.deadline))}</span>
+            <span class="column-label">Ansökningsdatum</span>
+            ${applicationDateBadge(source.deadline)}
           </span>
           <span class="accordion-chevron" aria-hidden="true">⌄</span>
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
             <div class="detail-grid">
-              ${detail("Deadline", shortDeadline(source.deadline))}
+              ${detail("Ansökningsdatum", shortDeadline(source.deadline))}
               ${detail("Svårighetsgrad", source.difficulty)}
               ${detail("Land", source.country)}
             </div>
@@ -365,6 +365,58 @@ function difficultyClass(value = "") {
   if (normalized.includes("låg") || normalized.includes("low")) return "low";
   if (normalized.includes("hög") || normalized.includes("high")) return "high";
   return "medium";
+}
+
+function applicationDateBadge(value = "") {
+  const label = shortDeadline(value);
+  const timing = applicationDateTiming(value);
+  const title = timing.days === null
+    ? timing.description
+    : `${timing.days} dagar kvar`;
+  return `<span class="date-badge date-${timing.level}" title="${escapeHTML(title)}">${escapeHTML(label)}</span>`;
+}
+
+function applicationDateTiming(value = "") {
+  const text = String(value).trim();
+  const normalized = text.toLocaleLowerCase("sv");
+
+  if (normalized.includes("löpande") || normalized.includes("när som helst")) {
+    return { level: "rolling", days: null, description: "Ansökan är löpande" };
+  }
+
+  const isoMatch = text.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+  if (isoMatch) {
+    const target = new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]), 23, 59, 59);
+    return dateProximity(target);
+  }
+
+  const months = {
+    januari: 0, februari: 1, mars: 2, april: 3, maj: 4, juni: 5,
+    juli: 6, augusti: 7, september: 8, oktober: 9, november: 10, december: 11
+  };
+  const mentionedMonths = Object.entries(months)
+    .filter(([month]) => normalized.includes(month))
+    .map(([, index]) => index);
+
+  if (mentionedMonths.length) {
+    const now = new Date();
+    const candidates = mentionedMonths.map(month => {
+      let target = new Date(now.getFullYear(), month, 1, 23, 59, 59);
+      if (target < now) target = new Date(now.getFullYear() + 1, month, 1, 23, 59, 59);
+      return target;
+    });
+    const next = candidates.sort((a, b) => a - b)[0];
+    return dateProximity(next);
+  }
+
+  return { level: "unknown", days: null, description: "Exakt ansökningsdatum saknas" };
+}
+
+function dateProximity(target) {
+  const days = Math.max(0, Math.ceil((target - new Date()) / 86400000));
+  if (days <= 30) return { level: "urgent", days, description: "Ansökningsdatumet närmar sig" };
+  if (days <= 90) return { level: "soon", days, description: "Ansökningsdatum inom tre månader" };
+  return { level: "later", days, description: "Ansökningsdatum längre fram" };
 }
 
 function formatDate(value) {

@@ -103,6 +103,12 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .difficulty-low { background: #dcfce7; color: #15803d; }
 .difficulty-medium { background: #fef3c7; color: #a16207; }
 .difficulty-high { background: #fee2e2; color: #b91c1c; }
+.date-badge { display: inline-flex; width: fit-content; max-width: 100%; border-radius: 999px; padding: 4px 9px; font-size: .7rem; font-weight: 800; line-height: 1.35; }
+.date-urgent { background: #fee2e2; color: #b91c1c; }
+.date-soon { background: #ffedd5; color: #c2410c; }
+.date-later { background: #dcfce7; color: #15803d; }
+.date-rolling { background: #dbeafe; color: #1d4ed8; }
+.date-unknown { background: #f3f4f6; color: #6b7280; }
 .accordion-chevron { color: var(--green); transition: transform .2s ease; }
 .accordion-item.open .accordion-chevron { transform: rotate(180deg); }
 .accordion-body { max-height: 0; overflow: hidden; transition: max-height .28s ease; }
