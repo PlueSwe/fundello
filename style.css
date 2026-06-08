@@ -178,14 +178,16 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .status-granted { background: #d1fae5; color: #047857; }
 .status-rejected { background: #fee2e2; color: #dc2626; }
 .status-overdue { background: #fef3c7; color: #b45309; }
+.status-not_relevant { background: #e5e7eb; color: #374151; }
 .source-count-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .restore-hidden { border: 0; background: transparent; color: var(--green); cursor: pointer; font-size: .75rem; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
-.status-summary-grid { grid-template-columns: repeat(5, 1fr); margin-bottom: 24px; }
+.status-summary-grid { grid-template-columns: repeat(3, 1fr); margin-bottom: 24px; }
 .status-summary-grid .kpi-card { min-height: 128px; }
 .kpi-status-applied .kpi-icon { background: #f3f4f6; color: #4b5563; }
 .kpi-status-granted .kpi-icon { background: #d1fae5; color: #047857; }
 .kpi-status-rejected .kpi-icon { background: #fee2e2; color: #b91c1c; }
 .kpi-status-overdue .kpi-icon { background: #fef3c7; color: #a16207; }
+.kpi-status-not_relevant .kpi-icon { background: #e5e7eb; color: #374151; }
 .status-filter-card { display: grid; gap: 2px; min-width: 135px; text-align: left; }
 .status-filter-card strong { font-size: .82rem; }
 .status-filter-card span { font-size: .68rem; font-weight: 650; opacity: .8; }

@@ -2,7 +2,8 @@
 
 const STATUS_FILTERS = [
   ["Alla", "all"], ["Väntar", "applied"], ["Beviljat", "granted"],
-  ["Avslaget", "rejected"], ["Försenat", "overdue"]
+  ["Avslaget", "rejected"], ["Försenat", "overdue"],
+  ["Inte aktuellt", "not_relevant"]
 ];
 
 const CATEGORY_CLASSES = {
@@ -45,7 +46,8 @@ const DISPLAY_NAMES = {
 
 const STATUS_LABELS = {
   applied: "⏳ Väntar", granted: "✓ Beviljat",
-  rejected: "× Avslaget", overdue: "⚠ Försenat"
+  rejected: "× Avslaget", overdue: "⚠ Försenat",
+  not_relevant: "– Inte aktuellt"
 };
 
 const SOURCE_STATUS_CHOICES = [
@@ -149,7 +151,7 @@ function timeAgo(isoString) {
 }
 
 function renderKPIs(target, apps) {
-  const summaries = ["applied", "granted", "rejected", "overdue"].map(status => {
+  const summaries = ["applied", "granted", "rejected", "overdue", "not_relevant"].map(status => {
     const matching = apps.filter(app => effectiveStatus(app) === status);
     return {
       status,
@@ -161,7 +163,7 @@ function renderKPIs(target, apps) {
   const cards = [
     ["Σ", `Totalt · ${apps.length} ansökningar`, formatSEK(totalAmount), "all"],
     ...summaries.map(summary => [
-      { applied: "…", granted: "✓", rejected: "×", overdue: "!" }[summary.status],
+      { applied: "…", granted: "✓", rejected: "×", overdue: "!", not_relevant: "–" }[summary.status],
       `${STATUS_LABELS[summary.status].replace(/^[^\s]+\s/, "")} · ${summary.count} st`,
       formatSEK(summary.amount),
       summary.status
@@ -229,6 +231,13 @@ async function loadFundingSources() {
     localApplications = loadLocalApplications();
     appliedSourceIds = new Set(localApplications.map(application => application.source_id));
     hiddenSourceIds = loadHiddenSourceIds();
+    hiddenSourceIds.forEach(sourceId => {
+      if (localApplications.some(application => application.source_id === sourceId)) return;
+      const application = createLocalApplication(sourceId, 0, "not_relevant");
+      if (application) localApplications.push(application);
+    });
+    appliedSourceIds = new Set(localApplications.map(application => application.source_id));
+    saveLocalApplications();
     const filterOptions = [
       { id: "all", label: "Alla" },
       ...categories.map(category => ({ id: category.id, label: category.label }))
@@ -238,7 +247,10 @@ async function loadFundingSources() {
     `).join("");
     const restoreButton = document.getElementById("restore-hidden");
     restoreButton.addEventListener("click", () => {
+      localApplications = localApplications.filter(application => application.status !== "not_relevant");
+      appliedSourceIds = new Set(localApplications.map(application => application.source_id));
       hiddenSourceIds.clear();
+      saveLocalApplications();
       saveHiddenSourceIds();
       filterSources();
     });
@@ -384,7 +396,7 @@ function renderApplications(data) {
     return;
   }
   if (activeStatus === "all") {
-    target.innerHTML = ["applied", "granted", "rejected", "overdue"]
+    target.innerHTML = ["applied", "granted", "rejected", "overdue", "not_relevant"]
       .map(status => {
         const statusItems = data.filter(app => effectiveStatus(app) === status);
         if (!statusItems.length) return "";
@@ -622,8 +634,16 @@ function bindAppliedControls(container) {
       const amountPanel = item.querySelector(".applied-amount");
       const amountInput = item.querySelector("[data-applied-amount]");
       if (status === "not_relevant") {
-        appliedSourceIds.delete(sourceId);
-        localApplications = localApplications.filter(application => application.source_id !== sourceId);
+        let application = localApplications.find(item => item.source_id === sourceId);
+        if (!application) {
+          application = createLocalApplication(sourceId, parseEnteredAmount(amountInput.value), status);
+          if (application) localApplications.push(application);
+        } else {
+          application.status = status;
+          application.amount_value = parseEnteredAmount(amountInput.value);
+          application.amount = formatSEK(application.amount_value);
+        }
+        appliedSourceIds.add(sourceId);
         hiddenSourceIds.add(sourceId);
         saveLocalApplications();
         saveHiddenSourceIds();
