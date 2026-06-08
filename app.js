@@ -66,6 +66,7 @@ let categories = [];
 let categoryById = new Map();
 let activeCategory = "all";
 let activeStatus = "all";
+let sourceSort = { key: null, direction: "asc" };
 let appliedSourceIds = new Set();
 let localApplications = [];
 let hiddenSourceIds = new Set();
@@ -229,6 +230,17 @@ async function loadFundingSources() {
     filterSources();
   });
   document.getElementById("source-search").addEventListener("input", filterSources);
+  document.querySelector(".funding-column-headings").addEventListener("click", event => {
+    const button = event.target.closest("[data-sort]");
+    if (!button) return;
+    const key = button.dataset.sort;
+    sourceSort = {
+      key,
+      direction: sourceSort.key === key && sourceSort.direction === "asc" ? "desc" : "asc"
+    };
+    updateSortHeadings();
+    filterSources();
+  });
 
   try {
     const data = await getJSON("funding_sources.json");
@@ -276,7 +288,54 @@ function filterSources() {
     const haystack = `${source.name} ${source.full_name || ""} ${source.country} ${category?.label || source.category}`.toLocaleLowerCase("sv");
     return !hiddenSourceIds.has(source.id) && categoryMatch && (!term || haystack.includes(term));
   });
-  renderSources(result);
+  renderSources(sortSources(result));
+}
+
+function sortSources(items) {
+  if (!sourceSort.key) return items;
+  const direction = sourceSort.direction === "asc" ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const first = sourceSortValue(a, sourceSort.key);
+    const second = sourceSortValue(b, sourceSort.key);
+    if (typeof first === "number" && typeof second === "number") {
+      return (first - second) * direction;
+    }
+    return String(first).localeCompare(String(second), "sv", { numeric: true, sensitivity: "base" }) * direction;
+  });
+}
+
+function sourceSortValue(source, key) {
+  if (key === "name") return displayName(source);
+  if (key === "difficulty") {
+    const difficulty = String(source.difficulty).toLocaleLowerCase("sv");
+    if (difficulty.includes("låg") || difficulty.includes("low")) return 1;
+    if (difficulty.includes("hög") || difficulty.includes("high")) return 3;
+    return 2;
+  }
+  if (key === "amount") return parseAmount(source.max_amount);
+  if (key === "category") return categoryById.get(source.category)?.label || source.category;
+  if (key === "deadline") return deadlineSortValue(source.deadline);
+  return "";
+}
+
+function deadlineSortValue(value = "") {
+  const timing = applicationDateTiming(value);
+  if (timing.days !== null && Number.isFinite(timing.days)) return timing.days;
+  const normalized = shortDeadline(value).toLocaleLowerCase("sv");
+  if (normalized.includes("löpande")) return 1000000;
+  if (normalized.includes("varierar")) return 1000001;
+  return 1000002;
+}
+
+function updateSortHeadings() {
+  document.querySelectorAll("[data-sort]").forEach(button => {
+    const active = button.dataset.sort === sourceSort.key;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-sort", active ? (sourceSort.direction === "asc" ? "ascending" : "descending") : "none");
+    button.querySelector("span").textContent = active
+      ? (sourceSort.direction === "asc" ? "↑" : "↓")
+      : "↕";
+  });
 }
 
 function renderSources(data) {
@@ -308,7 +367,7 @@ function renderSources(data) {
           <span class="accordion-amount" title="${escapeHTML(source.max_amount)}">${escapeHTML(compactAmount(source.max_amount))}</span>
           <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
           <span class="application-date" title="${escapeHTML(source.deadline)}">${escapeHTML(listApplicationDate(source.deadline))}</span>
-          <span class="accordion-chevron" aria-hidden="true">⌄</span>
+          <span class="accordion-chevron" aria-hidden="true">↓</span>
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
@@ -445,7 +504,7 @@ function renderApplicationItem(app) {
           <span class="accordion-title">${escapeHTML(app.funder_name)}</span>
           <span class="accordion-amount">${escapeHTML(app.amount)}</span>
           <span class="accordion-meta">Svar: ${formatDate(app.expected_response_date)}</span>
-          <span class="accordion-chevron" aria-hidden="true">⌄</span>
+          <span class="accordion-chevron" aria-hidden="true">↓</span>
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
