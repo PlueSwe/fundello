@@ -134,7 +134,7 @@ h2 { margin: 4px 0 0; font-family: Archivo, sans-serif; font-size: clamp(1.65rem
 .date-unknown { background: #f3f4f6; color: #6b7280; }
 .date-empty { color: #a2a79e; font-weight: 700; }
 .accordion-chevron { display: grid; width: 26px; height: 26px; place-items: center; border: 2px solid var(--green); border-radius: 50%; background: var(--green); box-shadow: 0 3px 8px rgba(7,91,145,.18); transition: transform .2s ease, background .2s ease; }
-.accordion-chevron::before { content: ""; width: 8px; height: 8px; border-right: 3px solid #fff; border-bottom: 3px solid #fff; transform: translateY(-2px) rotate(45deg); }
+.accordion-chevron::before { content: ""; width: 8px; height: 8px; border-right: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateY(-2px) rotate(45deg); }
 .accordion-header:hover .accordion-chevron { border-color: var(--gold); background: var(--gold); color: var(--green-dark); }
 .accordion-header:hover .accordion-chevron::before { border-color: var(--green-dark); }
 .accordion-item.open .accordion-chevron { transform: rotate(180deg); }

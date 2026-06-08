@@ -637,7 +637,7 @@ function truncateText(value = "", maxLength = 30) {
 
 function listApplicationDate(value = "") {
   if (isNominationDeadline(value)) return "—";
-  return truncateText(shortDeadline(value), 15);
+  return truncateText(shortDeadline(value), 25);
 }
 
 function compactAmount(value = "") {
