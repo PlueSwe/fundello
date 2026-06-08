@@ -97,6 +97,12 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .accordion-header:hover, .accordion-item.open .accordion-header { background: #f1f0ec; }
 .accordion-item.source-applied .accordion-header { background: #ecfdf3; box-shadow: inset 3px 0 0 #16a34a; }
 .accordion-item.source-applied .accordion-header:hover, .accordion-item.source-applied.open .accordion-header { background: #dcfce7; }
+.accordion-item.source-status-applied .accordion-header { background: #f3f4f6; box-shadow: inset 3px 0 0 #6b7280; }
+.accordion-item.source-status-applied .accordion-header:hover, .accordion-item.source-status-applied.open .accordion-header { background: #e5e7eb; }
+.accordion-item.source-status-rejected .accordion-header { background: #fff1f2; box-shadow: inset 3px 0 0 #dc2626; }
+.accordion-item.source-status-rejected .accordion-header:hover, .accordion-item.source-status-rejected.open .accordion-header { background: #fee2e2; }
+.accordion-item.source-status-overdue .accordion-header { background: #fffbeb; box-shadow: inset 3px 0 0 #d97706; }
+.accordion-item.source-status-overdue .accordion-header:hover, .accordion-item.source-status-overdue.open .accordion-header { background: #fef3c7; }
 .accordion-title { min-width: 0; overflow: hidden; color: var(--green-dark); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .source-logo { position: relative; display: grid; width: 32px; height: 32px; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .source-logo img { position: relative; z-index: 2; width: 28px; height: 28px; object-fit: contain; opacity: 0; transition: opacity .16s ease; }
@@ -124,10 +130,18 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .accordion-body { max-height: 0; overflow: hidden; transition: max-height .28s ease; }
 .accordion-content { margin: 0; padding: 16px 18px 19px 58px; border-top: 1px dashed var(--line); background: #fafaf8; }
 .source-applied .accordion-content { background: #f4fcf6; }
-.applied-control { display: grid; width: fit-content; grid-template-columns: auto auto; gap: 0 8px; align-items: center; margin-bottom: 16px; padding: 8px 11px; border: 1px solid #bbf7d0; border-radius: 6px; background: #fff; cursor: pointer; }
-.applied-control input { width: 16px; height: 16px; grid-row: 1 / 3; accent-color: #15803d; cursor: pointer; }
-.applied-control span { color: #166534; font-size: .82rem; font-weight: 800; }
-.applied-control small { color: var(--muted); font-size: .69rem; }
+.source-status-control { display: grid; gap: 7px; margin-bottom: 16px; }
+.source-status-label { color: var(--green-dark); font-size: .76rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.source-status-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.source-status-option { border: 1px solid var(--line); border-radius: 999px; background: #fff; padding: 8px 14px; color: var(--muted); cursor: pointer; font-weight: 800; }
+.source-status-option:hover { border-color: #aab4a2; color: var(--ink); }
+.status-choice-applied.selected { border-color: #9ca3af; background: #f3f4f6; color: #374151; }
+.status-choice-granted.selected { border-color: #6ee7b7; background: #d1fae5; color: #047857; }
+.status-choice-rejected.selected { border-color: #fca5a5; background: #fee2e2; color: #b91c1c; }
+.status-choice-overdue.selected { border-color: #fcd34d; background: #fef3c7; color: #a16207; }
+.status-choice-not_relevant { margin-left: auto; }
+.status-choice-not_relevant:hover { border-color: #d1d5db; background: #f3f4f6; color: #4b5563; }
+.source-status-control small { color: var(--muted); font-size: .69rem; }
 .applied-amount { display: none; width: min(320px, 100%); margin: -8px 0 18px; }
 .applied-amount.visible { display: grid; gap: 5px; }
 .applied-amount > span:first-child { color: var(--green-dark); font-size: .76rem; font-weight: 800; }
@@ -164,6 +178,21 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
 .status-granted { background: #d1fae5; color: #047857; }
 .status-rejected { background: #fee2e2; color: #dc2626; }
 .status-overdue { background: #fef3c7; color: #b45309; }
+.source-count-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.restore-hidden { border: 0; background: transparent; color: var(--green); cursor: pointer; font-size: .75rem; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+.status-summary-grid { grid-template-columns: repeat(5, 1fr); margin-bottom: 24px; }
+.status-summary-grid .kpi-card { min-height: 128px; }
+.kpi-status-applied .kpi-icon { background: #f3f4f6; color: #4b5563; }
+.kpi-status-granted .kpi-icon { background: #d1fae5; color: #047857; }
+.kpi-status-rejected .kpi-icon { background: #fee2e2; color: #b91c1c; }
+.kpi-status-overdue .kpi-icon { background: #fef3c7; color: #a16207; }
+.status-filter-card { display: grid; gap: 2px; min-width: 135px; text-align: left; }
+.status-filter-card strong { font-size: .82rem; }
+.status-filter-card span { font-size: .68rem; font-weight: 650; opacity: .8; }
+.application-status-group { display: grid; }
+.application-status-group + .application-status-group { border-top: 6px solid var(--bg); }
+.application-group-heading { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 13px; border-bottom: 1px solid var(--line); background: #f8f7f4; color: var(--muted); font-size: .78rem; }
+.application-group-heading strong { color: var(--ink); }
 .alert { display: flex; gap: 12px; align-items: center; margin-top: 18px; padding: 14px 17px; border: 1px solid #fed7aa; border-radius: 10px; background: #fff7ed; color: #9a4e0b; font-weight: 650; }
 
 .skeleton { min-height: 120px; background: linear-gradient(90deg, #fff 20%, #f2eee8 50%, #fff 80%); background-size: 300% 100%; animation: shimmer 1.4s infinite; }
@@ -187,6 +216,7 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
   .funding-list .accordion-chevron { grid-column: 6; }
   .funding-column-headings { display: none; }
   .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  .status-summary-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
   .container { width: min(100% - 28px, 1120px); }
@@ -219,6 +249,8 @@ h2 { margin: 4px 0 0; font-family: Lora, Georgia, serif; font-size: clamp(1.65re
   .accordion-content { margin: 0 15px; }
   .funding-list .accordion-content { margin: 0; padding: 15px; }
   .detail-grid { grid-template-columns: 1fr; }
+  .status-summary-grid { grid-template-columns: 1fr; }
+  .status-choice-not_relevant { margin-left: 0; }
   .footer-inner { align-items: start; flex-direction: column; justify-content: center; gap: 5px; }
 }
 @media (prefers-reduced-motion: reduce) {

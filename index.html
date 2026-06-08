@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260607-3">
-  <script src="app.js?v=20260607-3" defer></script>
+  <link rel="stylesheet" href="style.css?v=20260608-1">
+  <script src="app.js?v=20260608-1" defer></script>
 </head>
 <body data-page="funding">
   <header class="site-header">
@@ -31,7 +31,10 @@
         <input id="source-search" type="search" placeholder="Sök på namn, land eller kategori..." autocomplete="off">
       </label>
       <div class="filter-chips" id="category-filters"></div>
-      <p class="result-count" id="source-count">Laddar finansieringskällor...</p>
+      <div class="source-count-row">
+        <p class="result-count" id="source-count">Laddar finansieringskällor...</p>
+        <button class="restore-hidden" id="restore-hidden" type="button" hidden></button>
+      </div>
     </section>
 
     <div class="funding-column-headings" aria-hidden="true">

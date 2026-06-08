@@ -48,6 +48,11 @@ const STATUS_LABELS = {
   rejected: "× Avslaget", overdue: "⚠ Försenat"
 };
 
+const SOURCE_STATUS_CHOICES = [
+  ["Väntar", "applied"], ["Beviljat", "granted"], ["Avslaget", "rejected"],
+  ["Försenat", "overdue"], ["Inte aktuellt", "not_relevant"]
+];
+
 let sources = [];
 let applications = [];
 let categories = [];
@@ -56,6 +61,7 @@ let activeCategory = "all";
 let activeStatus = "all";
 let appliedSourceIds = new Set();
 let localApplications = [];
+let hiddenSourceIds = new Set();
 
 document.addEventListener("DOMContentLoaded", () => {
   initMenu();
@@ -143,18 +149,26 @@ function timeAgo(isoString) {
 }
 
 function renderKPIs(target, apps) {
-  const total = apps.reduce((sum, app) => sum + parseAmount(app.amount), 0);
-  const granted = apps.filter(app => app.status === "granted").reduce((sum, app) => sum + parseAmount(app.amount), 0);
-  const active = apps.filter(app => app.status === "applied").length;
-  const action = apps.filter(app => app.status === "applied" && daysUntil(app.expected_response_date) <= 14).length;
+  const summaries = ["applied", "granted", "rejected", "overdue"].map(status => {
+    const matching = apps.filter(app => effectiveStatus(app) === status);
+    return {
+      status,
+      count: matching.length,
+      amount: matching.reduce((sum, app) => sum + parseAmount(app.amount), 0)
+    };
+  });
+  const totalAmount = apps.reduce((sum, app) => sum + parseAmount(app.amount), 0);
   const cards = [
-    ["Σ", "Totalt sökt", formatSEK(total)],
-    ["✓", "Beviljat", formatSEK(granted)],
-    ["→", "Aktiva ansökningar", String(active)],
-    ["!", "Behöver åtgärd", String(action)]
+    ["Σ", `Totalt · ${apps.length} ansökningar`, formatSEK(totalAmount), "all"],
+    ...summaries.map(summary => [
+      { applied: "…", granted: "✓", rejected: "×", overdue: "!" }[summary.status],
+      `${STATUS_LABELS[summary.status].replace(/^[^\s]+\s/, "")} · ${summary.count} st`,
+      formatSEK(summary.amount),
+      summary.status
+    ])
   ];
-  target.innerHTML = cards.map(([icon, label, value]) => `
-    <article class="card kpi-card">
+  target.innerHTML = cards.map(([icon, label, value, status]) => `
+    <article class="card kpi-card kpi-status-${status}">
       <span class="kpi-icon">${icon}</span>
       <span class="kpi-label">${label}</span>
       <strong class="kpi-value">${value}</strong>
@@ -214,6 +228,7 @@ async function loadFundingSources() {
     categoryById = new Map(categories.map(category => [category.id, category]));
     localApplications = loadLocalApplications();
     appliedSourceIds = new Set(localApplications.map(application => application.source_id));
+    hiddenSourceIds = loadHiddenSourceIds();
     const filterOptions = [
       { id: "all", label: "Alla" },
       ...categories.map(category => ({ id: category.id, label: category.label }))
@@ -221,7 +236,13 @@ async function loadFundingSources() {
     filters.innerHTML = filterOptions.map(category => `
       <button class="filter-chip ${category.id === "all" ? "active" : ""}" type="button" data-category="${escapeHTML(category.id)}">${escapeHTML(category.label)}</button>
     `).join("");
-    renderSources(sources);
+    const restoreButton = document.getElementById("restore-hidden");
+    restoreButton.addEventListener("click", () => {
+      hiddenSourceIds.clear();
+      saveHiddenSourceIds();
+      filterSources();
+    });
+    filterSources();
   } catch {
     document.getElementById("funding-list").innerHTML = errorMessage("Kunde inte läsa funding_sources.json.");
     document.getElementById("source-count").textContent = "Ingen data tillgänglig";
@@ -234,14 +255,18 @@ function filterSources() {
     const category = categoryById.get(source.category);
     const categoryMatch = activeCategory === "all" || source.category === activeCategory;
     const haystack = `${source.name} ${source.full_name || ""} ${source.country} ${category?.label || source.category}`.toLocaleLowerCase("sv");
-    return categoryMatch && (!term || haystack.includes(term));
+    return !hiddenSourceIds.has(source.id) && categoryMatch && (!term || haystack.includes(term));
   });
   renderSources(result);
 }
 
 function renderSources(data) {
   const target = document.getElementById("funding-list");
-  document.getElementById("source-count").textContent = `${data.length} av ${sources.length} källor`;
+  const visibleTotal = sources.length - hiddenSourceIds.size;
+  document.getElementById("source-count").textContent = `${data.length} av ${visibleTotal} synliga källor`;
+  const restoreButton = document.getElementById("restore-hidden");
+  restoreButton.hidden = hiddenSourceIds.size === 0;
+  restoreButton.textContent = `Visa inte aktuella (${hiddenSourceIds.size})`;
   if (!data.length) {
     target.innerHTML = emptyMessage("Inga finansieringskällor matchar filtret.");
     return;
@@ -254,7 +279,7 @@ function renderSources(data) {
     const sourceName = displayName(source);
     const localApplication = localApplications.find(application => application.source_id === source.id);
     return `
-      <article class="accordion-item ${appliedSourceIds.has(source.id) ? "source-applied" : ""}" data-source-id="${escapeHTML(source.id)}">
+      <article class="accordion-item ${localApplication ? `source-applied source-status-${localApplication.status}` : ""}" data-source-id="${escapeHTML(source.id)}">
         <button class="accordion-header" type="button" aria-expanded="false" aria-controls="${id}">
           ${logoMarkup(source)}
           <span class="accordion-title" title="${escapeHTML(sourceName)}">${escapeHTML(truncateText(sourceName, 30))}</span>
@@ -268,11 +293,15 @@ function renderSources(data) {
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
-            <label class="applied-control">
-              <input type="checkbox" data-applied-source="${escapeHTML(source.id)}" ${appliedSourceIds.has(source.id) ? "checked" : ""}>
-              <span>Ansökt</span>
-              <small>Markera när ansökan är inskickad</small>
-            </label>
+            <div class="source-status-control" data-source-status-control="${escapeHTML(source.id)}">
+              <span class="source-status-label">Status</span>
+              <div class="source-status-options">
+                ${SOURCE_STATUS_CHOICES.map(([label, status]) => `
+                  <button type="button" class="source-status-option status-choice-${status} ${localApplication?.status === status ? "selected" : ""}" data-source-status="${escapeHTML(source.id)}" data-status="${status}">${label}</button>
+                `).join("")}
+              </div>
+              <small>Valet sparas på den här enheten och visas under Ansökningar.</small>
+            </div>
             <label class="applied-amount ${localApplication ? "visible" : ""}">
               <span>Sökt belopp</span>
               <span class="amount-input-wrap">
@@ -304,9 +333,6 @@ function renderSources(data) {
 
 async function loadApplications() {
   const filters = document.getElementById("status-filters");
-  filters.innerHTML = STATUS_FILTERS.map(([label, value]) => `
-    <button class="filter-chip ${value === "all" ? "active" : ""}" type="button" data-status="${value}">${label}</button>
-  `).join("");
   filters.addEventListener("click", event => {
     const button = event.target.closest("[data-status]");
     if (!button) return;
@@ -318,6 +344,7 @@ async function loadApplications() {
   try {
     const serverApplications = await getJSON("applications.json");
     applications = mergeApplications(serverApplications, loadLocalApplications());
+    renderStatusFilters(filters);
     renderKPIs(document.getElementById("application-kpis"), applications);
     renderDeadlineAlerts();
     renderApplications(applications);
@@ -356,7 +383,29 @@ function renderApplications(data) {
     target.innerHTML = emptyMessage("Inga ansökningar matchar filtret.");
     return;
   }
-  target.innerHTML = data.map(app => {
+  if (activeStatus === "all") {
+    target.innerHTML = ["applied", "granted", "rejected", "overdue"]
+      .map(status => {
+        const statusItems = data.filter(app => effectiveStatus(app) === status);
+        if (!statusItems.length) return "";
+        const total = statusItems.reduce((sum, app) => sum + parseAmount(app.amount), 0);
+        return `
+          <section class="application-status-group">
+            <div class="application-group-heading">
+              <span class="badge status-${status}">${STATUS_LABELS[status]}</span>
+              <strong>${statusItems.length} ${statusItems.length === 1 ? "ansökan" : "ansökningar"}</strong>
+              <span>${formatSEK(total)}</span>
+            </div>
+            ${statusItems.map(renderApplicationItem).join("")}
+          </section>`;
+      }).join("");
+  } else {
+    target.innerHTML = data.map(renderApplicationItem).join("");
+  }
+  bindAccordions(target);
+}
+
+function renderApplicationItem(app) {
     const status = effectiveStatus(app);
     const id = `application-${escapeHTML(app.id)}`;
     return `
@@ -379,8 +428,6 @@ function renderApplications(data) {
           </div>
         </div>
       </article>`;
-  }).join("");
-  bindAccordions(target);
 }
 
 function logoMarkup(source) {
@@ -509,6 +556,23 @@ function loadLocalApplications() {
   }
 }
 
+function loadHiddenSourceIds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("fundello-hidden-sources") || "[]");
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveHiddenSourceIds() {
+  try {
+    localStorage.setItem("fundello-hidden-sources", JSON.stringify([...hiddenSourceIds]));
+  } catch {
+    // Hiding still works until the page is reloaded.
+  }
+}
+
 function saveLocalApplications() {
   try {
     localStorage.setItem("fundello-local-applications", JSON.stringify(localApplications));
@@ -518,7 +582,7 @@ function saveLocalApplications() {
   }
 }
 
-function createLocalApplication(sourceId, amountValue) {
+function createLocalApplication(sourceId, amountValue, status = "applied") {
   const source = sources.find(item => item.id === sourceId);
   if (!source) return null;
   const category = categoryById.get(source.category);
@@ -531,7 +595,7 @@ function createLocalApplication(sourceId, amountValue) {
     amount_value: amountValue || 0,
     applied_date: new Date().toISOString().slice(0, 10),
     expected_response_date: "",
-    status: "applied",
+    status,
     notes: "Registrerad som ansökt i finansieringskatalogen."
   };
 }
@@ -550,26 +614,37 @@ function parseEnteredAmount(value = "") {
 }
 
 function bindAppliedControls(container) {
-  container.querySelectorAll("[data-applied-source]").forEach(checkbox => {
-    checkbox.addEventListener("change", () => {
-      const sourceId = checkbox.dataset.appliedSource;
-      const item = checkbox.closest(".accordion-item");
+  container.querySelectorAll("[data-source-status]").forEach(button => {
+    button.addEventListener("click", () => {
+      const sourceId = button.dataset.sourceStatus;
+      const status = button.dataset.status;
+      const item = button.closest(".accordion-item");
       const amountPanel = item.querySelector(".applied-amount");
       const amountInput = item.querySelector("[data-applied-amount]");
-      if (checkbox.checked) {
-        appliedSourceIds.add(sourceId);
-        if (!localApplications.some(application => application.source_id === sourceId)) {
-          const application = createLocalApplication(sourceId, parseEnteredAmount(amountInput.value));
-          if (application) localApplications.push(application);
-        }
-        amountPanel.classList.add("visible");
-        amountInput.focus();
-      } else {
+      if (status === "not_relevant") {
         appliedSourceIds.delete(sourceId);
         localApplications = localApplications.filter(application => application.source_id !== sourceId);
-        amountPanel.classList.remove("visible");
+        hiddenSourceIds.add(sourceId);
+        saveLocalApplications();
+        saveHiddenSourceIds();
+        filterSources();
+        return;
       }
-      item.classList.toggle("source-applied", checkbox.checked);
+
+      appliedSourceIds.add(sourceId);
+      let application = localApplications.find(item => item.source_id === sourceId);
+      if (!application) {
+        application = createLocalApplication(sourceId, parseEnteredAmount(amountInput.value), status);
+        if (application) localApplications.push(application);
+      } else {
+        application.status = status;
+      }
+      item.querySelectorAll("[data-source-status]").forEach(option => {
+        option.classList.toggle("selected", option === button);
+      });
+      item.classList.remove("source-status-applied", "source-status-granted", "source-status-rejected", "source-status-overdue");
+      item.classList.add("source-applied", `source-status-${status}`);
+      amountPanel.classList.add("visible");
       saveLocalApplications();
       const body = item.querySelector(".accordion-body");
       if (item.classList.contains("open")) body.style.maxHeight = `${body.scrollHeight}px`;
@@ -586,6 +661,23 @@ function bindAppliedControls(container) {
       saveLocalApplications();
     });
   });
+}
+
+function renderStatusFilters(container) {
+  const allAmount = applications.reduce((sum, app) => sum + parseAmount(app.amount), 0);
+  const options = [
+    ["Alla", "all", applications.length, allAmount],
+    ...STATUS_FILTERS.slice(1).map(([label, status]) => {
+      const matching = applications.filter(app => effectiveStatus(app) === status);
+      return [label, status, matching.length, matching.reduce((sum, app) => sum + parseAmount(app.amount), 0)];
+    })
+  ];
+  container.innerHTML = options.map(([label, value, count, amount]) => `
+    <button class="filter-chip status-filter-card ${value === activeStatus ? "active" : ""}" type="button" data-status="${value}">
+      <strong>${label}</strong>
+      <span>${count} st · ${formatSEK(amount)}</span>
+    </button>
+  `).join("");
 }
 
 function applicationDateTiming(value = "") {
