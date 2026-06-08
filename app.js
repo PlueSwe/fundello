@@ -3,7 +3,7 @@
 const STATUS_FILTERS = [
   ["Alla", "all"], ["Väntar", "applied"], ["Beviljat", "granted"],
   ["Avslaget", "rejected"], ["Försenat", "overdue"],
-  ["Inte aktuellt", "not_relevant"]
+  ["Ej aktuellt", "not_relevant"]
 ];
 
 const CATEGORY_CLASSES = {
@@ -47,12 +47,12 @@ const DISPLAY_NAMES = {
 const STATUS_LABELS = {
   applied: "⏳ Väntar", granted: "✓ Beviljat",
   rejected: "× Avslaget", overdue: "⚠ Försenat",
-  not_relevant: "– Inte aktuellt"
+  not_relevant: "– Ej aktuellt"
 };
 
 const SOURCE_STATUS_CHOICES = [
   ["Väntar", "applied"], ["Beviljat", "granted"], ["Avslaget", "rejected"],
-  ["Försenat", "overdue"], ["Inte aktuellt", "not_relevant"]
+  ["Försenat", "overdue"], ["Ej aktuellt", "not_relevant"]
 ];
 
 let sources = [];
@@ -64,6 +64,8 @@ let activeStatus = "all";
 let appliedSourceIds = new Set();
 let localApplications = [];
 let hiddenSourceIds = new Set();
+let serverApplications = [];
+let resetApplicationIds = new Set();
 
 document.addEventListener("DOMContentLoaded", () => {
   initMenu();
@@ -278,7 +280,7 @@ function renderSources(data) {
   document.getElementById("source-count").textContent = `${data.length} av ${visibleTotal} synliga källor`;
   const restoreButton = document.getElementById("restore-hidden");
   restoreButton.hidden = hiddenSourceIds.size === 0;
-  restoreButton.textContent = `Visa inte aktuella (${hiddenSourceIds.size})`;
+  restoreButton.textContent = `Visa ej aktuella (${hiddenSourceIds.size})`;
   if (!data.length) {
     target.innerHTML = emptyMessage("Inga finansieringskällor matchar filtret.");
     return;
@@ -354,12 +356,12 @@ async function loadApplications() {
   });
 
   try {
-    const serverApplications = await getJSON("applications.json");
-    applications = mergeApplications(serverApplications, loadLocalApplications());
-    renderStatusFilters(filters);
-    renderKPIs(document.getElementById("application-kpis"), applications);
-    renderDeadlineAlerts();
-    renderApplications(applications);
+    serverApplications = await getJSON("applications.json");
+    localApplications = loadLocalApplications();
+    hiddenSourceIds = loadHiddenSourceIds();
+    resetApplicationIds = loadResetApplicationIds();
+    refreshApplicationsView();
+    document.getElementById("reset-all-applications").addEventListener("click", resetAllApplications);
   } catch {
     document.getElementById("application-kpis").innerHTML = errorMessage("Kunde inte läsa applications.json.");
     document.getElementById("application-count").textContent = "Ingen data tillgänglig";
@@ -388,6 +390,14 @@ function filterApplications() {
   renderApplications(result);
 }
 
+function refreshApplicationsView() {
+  applications = mergeApplications(serverApplications, localApplications);
+  renderStatusFilters(document.getElementById("status-filters"));
+  renderKPIs(document.getElementById("application-kpis"), applications);
+  renderDeadlineAlerts();
+  filterApplications();
+}
+
 function renderApplications(data) {
   const target = document.getElementById("application-list");
   document.getElementById("application-count").textContent = `${data.length} av ${applications.length} ansökningar`;
@@ -414,6 +424,7 @@ function renderApplications(data) {
   } else {
     target.innerHTML = data.map(renderApplicationItem).join("");
   }
+  bindApplicationControls(target);
   bindAccordions(target);
 }
 
@@ -431,6 +442,16 @@ function renderApplicationItem(app) {
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
+            <div class="source-status-control">
+              <span class="source-status-label">Ändra status</span>
+              <div class="source-status-options">
+                ${SOURCE_STATUS_CHOICES.map(([label, choice]) => `
+                  <button type="button" class="source-status-option status-choice-${choice} ${app.status === choice ? "selected" : ""}" data-application-status="${escapeHTML(app.id)}" data-status="${choice}">${label}</button>
+                `).join("")}
+                <button type="button" class="source-status-option reset-status-option" data-reset-application="${escapeHTML(app.id)}">Nollställ</button>
+              </div>
+              <small>Nollställ tar bort ansökningsmarkeringen helt.</small>
+            </div>
             <div class="detail-grid">
               ${detail("Ansökt", formatDate(app.applied_date))}
               ${detail("Förväntat svar", formatDate(app.expected_response_date))}
@@ -577,6 +598,23 @@ function loadHiddenSourceIds() {
   }
 }
 
+function loadResetApplicationIds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("fundello-reset-applications") || "[]");
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveResetApplicationIds() {
+  try {
+    localStorage.setItem("fundello-reset-applications", JSON.stringify([...resetApplicationIds]));
+  } catch {
+    // The current page still updates if storage is unavailable.
+  }
+}
+
 function saveHiddenSourceIds() {
   try {
     localStorage.setItem("fundello-hidden-sources", JSON.stringify([...hiddenSourceIds]));
@@ -615,7 +653,7 @@ function createLocalApplication(sourceId, amountValue, status = "applied") {
 function mergeApplications(serverApplications, localItems) {
   const localIds = new Set(localItems.map(application => application.id));
   return [
-    ...serverApplications.filter(application => !localIds.has(application.id)),
+    ...serverApplications.filter(application => !localIds.has(application.id) && !resetApplicationIds.has(application.id)),
     ...localItems
   ];
 }
@@ -681,6 +719,69 @@ function bindAppliedControls(container) {
       saveLocalApplications();
     });
   });
+}
+
+function bindApplicationControls(container) {
+  container.querySelectorAll("[data-application-status]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      const applicationId = button.dataset.applicationStatus;
+      const status = button.dataset.status;
+      const current = applications.find(application => application.id === applicationId);
+      if (!current) return;
+
+      let local = localApplications.find(application => application.id === applicationId);
+      if (!local) {
+        local = { ...current };
+        localApplications.push(local);
+      }
+      local.status = status;
+      resetApplicationIds.delete(applicationId);
+      if (local.source_id) {
+        if (status === "not_relevant") hiddenSourceIds.add(local.source_id);
+        else hiddenSourceIds.delete(local.source_id);
+      }
+      saveLocalApplications();
+      saveHiddenSourceIds();
+      saveResetApplicationIds();
+      refreshApplicationsView();
+    });
+  });
+
+  container.querySelectorAll("[data-reset-application]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      resetApplication(button.dataset.resetApplication);
+    });
+  });
+}
+
+function resetApplication(applicationId) {
+  const current = applications.find(application => application.id === applicationId);
+  localApplications = localApplications.filter(application => application.id !== applicationId);
+  if (serverApplications.some(application => application.id === applicationId)) {
+    resetApplicationIds.add(applicationId);
+  } else {
+    resetApplicationIds.delete(applicationId);
+  }
+  if (current?.source_id) hiddenSourceIds.delete(current.source_id);
+  saveLocalApplications();
+  saveHiddenSourceIds();
+  saveResetApplicationIds();
+  refreshApplicationsView();
+}
+
+function resetAllApplications() {
+  if (!applications.length) return;
+  if (!window.confirm("Nollställ alla ansökningar och statusar?")) return;
+  localApplications = [];
+  hiddenSourceIds.clear();
+  resetApplicationIds = new Set(serverApplications.map(application => application.id));
+  activeStatus = "all";
+  saveLocalApplications();
+  saveHiddenSourceIds();
+  saveResetApplicationIds();
+  refreshApplicationsView();
 }
 
 function renderStatusFilters(container) {

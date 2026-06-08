@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260608-2">
-  <script src="app.js?v=20260608-2" defer></script>
+  <link rel="stylesheet" href="style.css?v=20260608-3">
+  <script src="app.js?v=20260608-3" defer></script>
 </head>
 <body data-page="applications">
   <header class="site-header">
@@ -33,7 +33,10 @@
 
     <section class="filter-panel compact" aria-label="Filtrera ansökningar">
       <div class="filter-chips" id="status-filters"></div>
-      <p class="result-count" id="application-count">Laddar ansökningar...</p>
+      <div class="application-toolbar">
+        <p class="result-count" id="application-count">Laddar ansökningar...</p>
+        <button class="reset-all-button" id="reset-all-applications" type="button">Nollställ alla</button>
+      </div>
     </section>
 
     <section class="accordion-list" id="application-list" aria-live="polite"></section>
