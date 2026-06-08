@@ -137,6 +137,18 @@ function formatSEK(value) {
   return `${new Intl.NumberFormat("sv-SE").format(value)} SEK`;
 }
 
+function requestedAmount(app) {
+  return Number(app.amount_value) || parseAmount(app.amount);
+}
+
+function grantedAmount(app) {
+  return Number(app.granted_amount_value) || parseAmount(app.granted_amount);
+}
+
+function statusAmount(app) {
+  return effectiveStatus(app) === "granted" ? grantedAmount(app) : requestedAmount(app);
+}
+
 function daysUntil(dateString) {
   if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return Infinity;
   const target = new Date(`${dateString}T23:59:59`);
@@ -164,10 +176,10 @@ function renderKPIs(target, apps) {
     return {
       status,
       count: matching.length,
-      amount: matching.reduce((sum, app) => sum + parseAmount(app.amount), 0)
+      amount: matching.reduce((sum, app) => sum + statusAmount(app), 0)
     };
   });
-  const totalAmount = apps.reduce((sum, app) => sum + parseAmount(app.amount), 0);
+  const totalAmount = apps.reduce((sum, app) => sum + requestedAmount(app), 0);
   const cards = [
     ["Σ", `Totalt · ${apps.length} ansökningar`, formatSEK(totalAmount), "all"],
     ...summaries.map(summary => [
@@ -183,6 +195,29 @@ function renderKPIs(target, apps) {
       <span class="kpi-label">${label}</span>
       <strong class="kpi-value">${value}</strong>
     </article>`).join("");
+}
+
+function renderFundingComparison(target, apps) {
+  const requested = apps.reduce((sum, app) => sum + requestedAmount(app), 0);
+  const grantedApps = apps.filter(app => effectiveStatus(app) === "granted");
+  const granted = grantedApps.reduce((sum, app) => sum + grantedAmount(app), 0);
+  const difference = requested - granted;
+  target.innerHTML = `
+    <article class="comparison-card comparison-requested">
+      <span class="comparison-label">Totalt sökt</span>
+      <strong>${formatSEK(requested)}</strong>
+      <small>${apps.length} ${apps.length === 1 ? "ansökan" : "ansökningar"}</small>
+    </article>
+    <article class="comparison-card comparison-granted">
+      <span class="comparison-label">Totalt beviljat</span>
+      <strong>${formatSEK(granted)}</strong>
+      <small>${grantedApps.length} beviljade</small>
+    </article>
+    <article class="comparison-card comparison-difference ${difference < 0 ? "is-positive" : ""}">
+      <span class="comparison-label">Skillnad</span>
+      <strong>${formatSEK(difference)}</strong>
+      <small>${difference >= 0 ? "Sökt minus beviljat" : "Mer beviljat än sökt"}</small>
+    </article>`;
 }
 
 async function loadHomeKPIs() {
@@ -390,6 +425,14 @@ function renderSources(data) {
               </span>
               <small>Beloppet används automatiskt i ansökningsöversikten.</small>
             </label>
+            <label class="granted-amount ${localApplication?.status === "granted" ? "visible" : ""}">
+              <span>Beviljat belopp</span>
+              <span class="amount-input-wrap">
+                <input type="text" inputmode="numeric" autocomplete="off" data-granted-amount="${escapeHTML(source.id)}" value="${localApplication ? escapeHTML(String(localApplication.granted_amount_value || "")) : ""}" placeholder="Exempel: 300 000">
+                <strong>SEK</strong>
+              </span>
+              <small>Det sökta beloppet sparas separat för jämförelsen.</small>
+            </label>
             <div class="detail-grid">
               ${detail("Maxbelopp", source.max_amount)}
               ${detail("Ansökningsdatum", shortDeadline(source.deadline))}
@@ -459,6 +502,7 @@ function filterApplications() {
 function refreshApplicationsView() {
   applications = mergeApplications(serverApplications, localApplications);
   renderStatusFilters(document.getElementById("status-filters"));
+  renderFundingComparison(document.getElementById("funding-comparison"), applications);
   renderKPIs(document.getElementById("application-kpis"), applications);
   renderDeadlineAlerts();
   filterApplications();
@@ -476,13 +520,13 @@ function renderApplications(data) {
       .map(status => {
         const statusItems = data.filter(app => effectiveStatus(app) === status);
         if (!statusItems.length) return "";
-        const total = statusItems.reduce((sum, app) => sum + parseAmount(app.amount), 0);
+        const total = statusItems.reduce((sum, app) => sum + statusAmount(app), 0);
         return `
           <section class="application-status-group">
             <div class="application-group-heading">
               <span class="badge status-${status}">${STATUS_LABELS[status]}</span>
               <strong>${statusItems.length} ${statusItems.length === 1 ? "ansökan" : "ansökningar"}</strong>
-              <span>${formatSEK(total)}</span>
+              <span data-status-group-total="${status}">${formatSEK(total)}</span>
             </div>
             ${statusItems.map(renderApplicationItem).join("")}
           </section>`;
@@ -496,6 +540,9 @@ function renderApplications(data) {
 
 function renderApplicationItem(app) {
     const status = effectiveStatus(app);
+    const requested = requestedAmount(app);
+    const granted = grantedAmount(app);
+    const difference = requested - granted;
     const id = `application-${escapeHTML(app.id)}`;
     return `
       <article class="accordion-item">
@@ -519,6 +566,19 @@ function renderApplicationItem(app) {
                 <button type="button" class="source-status-option reset-status-option" data-reset-application="${escapeHTML(app.id)}">Nollställ</button>
               </div>
               <small>Nollställ tar bort ansökningsmarkeringen helt.</small>
+            </div>
+            <label class="granted-amount ${app.status === "granted" ? "visible" : ""}">
+              <span>Beviljat belopp</span>
+              <span class="amount-input-wrap">
+                <input type="text" inputmode="numeric" autocomplete="off" data-application-granted-amount="${escapeHTML(app.id)}" value="${granted ? escapeHTML(String(granted)) : ""}" placeholder="Exempel: 300 000">
+                <strong>SEK</strong>
+              </span>
+              <small>Ändringen uppdaterar jämförelsen direkt.</small>
+            </label>
+            <div class="application-amount-comparison">
+              <div><span>Sökt</span><strong data-comparison-requested>${formatSEK(requested)}</strong></div>
+              <div><span>Beviljat</span><strong data-comparison-granted>${formatSEK(granted)}</strong></div>
+              <div><span>Skillnad</span><strong data-comparison-difference>${formatSEK(difference)}</strong></div>
             </div>
             <div class="detail-grid">
               ${detail("Ansökt", formatDate(app.applied_date))}
@@ -711,6 +771,8 @@ function createLocalApplication(sourceId, amountValue, status = "applied") {
     category: category?.label || source.category,
     amount: formatSEK(amountValue || 0),
     amount_value: amountValue || 0,
+    granted_amount: formatSEK(0),
+    granted_amount_value: 0,
     applied_date: new Date().toISOString().slice(0, 10),
     expected_response_date: "",
     status,
@@ -739,6 +801,7 @@ function bindAppliedControls(container) {
       const item = button.closest(".accordion-item");
       const amountPanel = item.querySelector(".applied-amount");
       const amountInput = item.querySelector("[data-applied-amount]");
+      const grantedPanel = item.querySelector(".granted-amount");
       const existing = localApplications.find(application => application.source_id === sourceId);
       if (existing?.status === status) {
         appliedSourceIds.delete(sourceId);
@@ -750,6 +813,7 @@ function bindAppliedControls(container) {
         });
         item.classList.remove("source-applied", "source-status-applied", "source-status-granted", "source-status-rejected", "source-status-overdue");
         amountPanel.classList.remove("visible");
+        grantedPanel.classList.remove("visible");
         saveLocalApplications();
         saveHiddenSourceIds();
         const body = item.querySelector(".accordion-body");
@@ -789,6 +853,7 @@ function bindAppliedControls(container) {
       item.classList.remove("source-status-applied", "source-status-granted", "source-status-rejected", "source-status-overdue");
       item.classList.add("source-applied", `source-status-${status}`);
       amountPanel.classList.toggle("visible", status === "applied");
+      grantedPanel.classList.toggle("visible", status === "granted");
       saveLocalApplications();
       const body = item.querySelector(".accordion-body");
       if (item.classList.contains("open")) body.style.maxHeight = `${body.scrollHeight}px`;
@@ -802,6 +867,17 @@ function bindAppliedControls(container) {
       if (!application) return;
       application.amount_value = parseEnteredAmount(input.value);
       application.amount = formatSEK(application.amount_value);
+      saveLocalApplications();
+    });
+  });
+
+  container.querySelectorAll("[data-granted-amount]").forEach(input => {
+    input.addEventListener("input", () => {
+      const sourceId = input.dataset.grantedAmount;
+      const application = localApplications.find(item => item.source_id === sourceId);
+      if (!application) return;
+      application.granted_amount_value = parseEnteredAmount(input.value);
+      application.granted_amount = formatSEK(application.granted_amount_value);
       saveLocalApplications();
     });
   });
@@ -844,6 +920,37 @@ function bindApplicationControls(container) {
       resetApplication(button.dataset.resetApplication);
     });
   });
+
+  container.querySelectorAll("[data-application-granted-amount]").forEach(input => {
+    input.addEventListener("input", () => {
+      const applicationId = input.dataset.applicationGrantedAmount;
+      const current = applications.find(application => application.id === applicationId);
+      if (!current) return;
+      let local = localApplications.find(application => application.id === applicationId);
+      if (!local) {
+        local = { ...current };
+        localApplications.push(local);
+      }
+      local.granted_amount_value = parseEnteredAmount(input.value);
+      local.granted_amount = formatSEK(local.granted_amount_value);
+      saveLocalApplications();
+      const merged = mergeApplications(serverApplications, localApplications);
+      const item = input.closest(".accordion-item");
+      item.querySelector("[data-comparison-granted]").textContent = formatSEK(local.granted_amount_value);
+      item.querySelector("[data-comparison-difference]").textContent = formatSEK(requestedAmount(local) - local.granted_amount_value);
+      renderFundingComparison(document.getElementById("funding-comparison"), merged);
+      applications = merged;
+      renderStatusFilters(document.getElementById("status-filters"));
+      renderKPIs(document.getElementById("application-kpis"), applications);
+      const groupTotal = document.querySelector('[data-status-group-total="granted"]');
+      if (groupTotal) {
+        const grantedTotal = applications
+          .filter(application => effectiveStatus(application) === "granted")
+          .reduce((sum, application) => sum + grantedAmount(application), 0);
+        groupTotal.textContent = formatSEK(grantedTotal);
+      }
+    });
+  });
 }
 
 function resetApplication(applicationId) {
@@ -875,12 +982,12 @@ function resetAllApplications() {
 }
 
 function renderStatusFilters(container) {
-  const allAmount = applications.reduce((sum, app) => sum + parseAmount(app.amount), 0);
+  const allAmount = applications.reduce((sum, app) => sum + requestedAmount(app), 0);
   const options = [
     ["Alla", "all", applications.length, allAmount],
     ...STATUS_FILTERS.slice(1).map(([label, status]) => {
       const matching = applications.filter(app => effectiveStatus(app) === status);
-      return [label, status, matching.length, matching.reduce((sum, app) => sum + parseAmount(app.amount), 0)];
+      return [label, status, matching.length, matching.reduce((sum, app) => sum + statusAmount(app), 0)];
     })
   ];
   container.innerHTML = options.map(([label, value, count, amount]) => `

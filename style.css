@@ -157,14 +157,14 @@ h2 { margin: 4px 0 0; font-family: Archivo, sans-serif; font-size: clamp(1.65rem
 .status-choice-not_relevant { margin-left: auto; }
 .status-choice-not_relevant:hover { border-color: #d1d5db; background: #f3f4f6; color: #4b5563; }
 .source-status-control small { color: var(--muted); font-size: .69rem; }
-.applied-amount { display: none; width: min(320px, 100%); margin: -8px 0 18px; }
-.applied-amount.visible { display: grid; gap: 5px; }
-.applied-amount > span:first-child { color: var(--green-dark); font-size: .76rem; font-weight: 800; }
+.applied-amount, .granted-amount { display: none; width: min(320px, 100%); margin: -8px 0 18px; }
+.applied-amount.visible, .granted-amount.visible { display: grid; gap: 5px; }
+.applied-amount > span:first-child, .granted-amount > span:first-child { color: var(--green-dark); font-size: .76rem; font-weight: 800; }
 .amount-input-wrap { display: flex; align-items: center; overflow: hidden; border: 1px solid #9fc2d6; border-radius: 999px; background: #fff; }
 .amount-input-wrap:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(7,91,145,.12); }
 .amount-input-wrap input { min-width: 0; flex: 1; border: 0; outline: 0; padding: 9px 10px; background: transparent; color: var(--ink); font-weight: 700; }
 .amount-input-wrap strong { padding: 0 10px; color: var(--muted); font-size: .75rem; }
-.applied-amount small { color: var(--muted); font-size: .69rem; }
+.applied-amount small, .granted-amount small { color: var(--muted); font-size: .69rem; }
 .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
 .detail-label { display: block; color: var(--muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .detail-value { display: block; margin-top: 3px; font-weight: 700; }
@@ -203,6 +203,20 @@ h2 { margin: 4px 0 0; font-family: Archivo, sans-serif; font-size: clamp(1.65rem
 .kpi-status-rejected .kpi-icon { background: #fee2e2; color: #b91c1c; }
 .kpi-status-overdue .kpi-icon { background: #fef3c7; color: #a16207; }
 .kpi-status-not_relevant .kpi-icon { background: #e5e7eb; color: #374151; }
+.funding-comparison-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 18px; }
+.comparison-card { position: relative; overflow: hidden; min-height: 145px; padding: 23px; border-radius: 18px; color: #fff; box-shadow: var(--shadow); }
+.comparison-card::after { content: ""; position: absolute; right: -34px; bottom: -48px; width: 120px; height: 120px; border: 24px solid rgba(255,255,255,.11); border-radius: 50%; }
+.comparison-requested { background: var(--green-dark); }
+.comparison-granted { background: #087a67; }
+.comparison-difference { background: #a85d13; }
+.comparison-difference.is-positive { background: #087a67; }
+.comparison-label { display: block; position: relative; z-index: 1; color: rgba(255,255,255,.78); font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.comparison-card strong { display: block; position: relative; z-index: 1; margin-top: 11px; font-family: Archivo, sans-serif; font-size: clamp(1.45rem, 2.8vw, 2.1rem); letter-spacing: -.04em; }
+.comparison-card small { display: block; position: relative; z-index: 1; margin-top: 4px; color: rgba(255,255,255,.72); }
+.application-amount-comparison { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 20px; }
+.application-amount-comparison div { padding: 12px 14px; border: 1px solid #c9dbe5; border-radius: 12px; background: #fff; }
+.application-amount-comparison span { display: block; color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.application-amount-comparison strong { display: block; margin-top: 3px; color: var(--green-dark); font-family: Archivo, sans-serif; font-size: 1rem; }
 .status-filter-card { display: grid; gap: 2px; min-width: 135px; text-align: left; }
 .status-filter-card strong { font-size: .82rem; }
 .status-filter-card span { font-size: .68rem; font-weight: 650; opacity: .8; }
@@ -239,6 +253,7 @@ h2 { margin: 4px 0 0; font-family: Archivo, sans-serif; font-size: clamp(1.65rem
   .funding-column-headings { display: none; }
   .detail-grid { grid-template-columns: repeat(2, 1fr); }
   .status-summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .funding-comparison-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 640px) {
   .container { width: min(100% - 28px, 1120px); }
@@ -272,6 +287,7 @@ h2 { margin: 4px 0 0; font-family: Archivo, sans-serif; font-size: clamp(1.65rem
   .funding-list .accordion-content { margin: 0; padding: 15px; }
   .detail-grid { grid-template-columns: 1fr; }
   .status-summary-grid { grid-template-columns: 1fr; }
+  .funding-comparison-grid, .application-amount-comparison { grid-template-columns: 1fr; }
   .status-choice-not_relevant { margin-left: 0; }
   .footer-inner { align-items: start; flex-direction: column; justify-content: center; gap: 5px; }
 }
