@@ -137,8 +137,12 @@ h2 { margin: 4px 0 0; font-family: Archivo, sans-serif; font-size: clamp(1.65rem
 .source-status-control { display: grid; gap: 7px; margin-bottom: 16px; }
 .source-status-label { color: var(--green-dark); font-size: .76rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
 .source-status-options { display: flex; flex-wrap: wrap; gap: 8px; }
-.source-status-option { border: 1px solid var(--line); border-radius: 999px; background: #fff; padding: 8px 14px; color: var(--muted); cursor: pointer; font-family: Archivo, sans-serif; font-size: .78rem; font-weight: 700; }
+.source-status-option { display: inline-flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 999px; background: #fff; padding: 6px 8px 6px 13px; color: var(--muted); cursor: pointer; font-family: Archivo, sans-serif; font-size: .78rem; font-weight: 700; }
 .source-status-option:hover { border-color: var(--green); color: var(--green-dark); }
+.status-switch { position: relative; width: 34px; height: 20px; flex: 0 0 auto; border-radius: 999px; background: #d8dde0; transition: background .18s ease; }
+.status-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(18,43,58,.22); transition: transform .18s ease; }
+.source-status-option.selected .status-switch { background: currentColor; }
+.source-status-option.selected .status-switch::after { transform: translateX(14px); }
 .status-choice-applied.selected { border-color: #9ca3af; background: #f3f4f6; color: #374151; }
 .status-choice-granted.selected { border-color: #6ee7b7; background: #d1fae5; color: #047857; }
 .status-choice-rejected.selected { border-color: #fca5a5; background: #fee2e2; color: #b91c1c; }
@@ -198,7 +202,7 @@ h2 { margin: 4px 0 0; font-family: Archivo, sans-serif; font-size: clamp(1.65rem
 .application-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
 .reset-all-button { border: 1px solid #fecaca; border-radius: 999px; background: #fff; padding: 8px 14px; color: #b91c1c; cursor: pointer; font-size: .75rem; font-weight: 800; }
 .reset-all-button:hover { background: #fef2f2; border-color: #f87171; }
-.reset-status-option { border-color: #fecaca; color: #b91c1c; }
+.reset-status-option { padding: 8px 14px; border-color: #fecaca; color: #b91c1c; }
 .reset-status-option:hover { border-color: #f87171; background: #fef2f2; color: #991b1b; }
 .application-status-group { display: grid; }
 .application-status-group + .application-status-group { border-top: 6px solid var(--bg); }

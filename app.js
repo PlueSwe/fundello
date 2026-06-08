@@ -55,6 +55,11 @@ const SOURCE_STATUS_CHOICES = [
   ["Försenat", "overdue"], ["Ej aktuellt", "not_relevant"]
 ];
 
+const FUNDING_STATUS_CHOICES = [
+  ["Ansökt", "applied"], ["Beviljat", "granted"], ["Avslaget", "rejected"],
+  ["Försenat", "overdue"], ["Ej aktuellt", "not_relevant"]
+];
+
 let sources = [];
 let applications = [];
 let categories = [];
@@ -310,13 +315,15 @@ function renderSources(data) {
             <div class="source-status-control" data-source-status-control="${escapeHTML(source.id)}">
               <span class="source-status-label">Status</span>
               <div class="source-status-options">
-                ${SOURCE_STATUS_CHOICES.map(([label, status]) => `
-                  <button type="button" class="source-status-option status-choice-${status} ${localApplication?.status === status ? "selected" : ""}" data-source-status="${escapeHTML(source.id)}" data-status="${status}">${label}</button>
+                ${FUNDING_STATUS_CHOICES.map(([label, status]) => `
+                  <button type="button" role="switch" aria-checked="${localApplication?.status === status}" class="source-status-option status-choice-${status} ${localApplication?.status === status ? "selected" : ""}" data-source-status="${escapeHTML(source.id)}" data-status="${status}">
+                    <span>${label}</span><span class="status-switch" aria-hidden="true"></span>
+                  </button>
                 `).join("")}
               </div>
-              <small>Valet sparas på den här enheten och visas under Ansökningar.</small>
+              <small>Ett aktivt reglage åt gången. Ansökt sparas som Väntar under Ansökningar.</small>
             </div>
-            <label class="applied-amount ${localApplication ? "visible" : ""}">
+            <label class="applied-amount ${localApplication?.status === "applied" ? "visible" : ""}">
               <span>Sökt belopp</span>
               <span class="amount-input-wrap">
                 <input type="text" inputmode="numeric" autocomplete="off" data-applied-amount="${escapeHTML(source.id)}" value="${localApplication ? escapeHTML(String(localApplication.amount_value || "")) : ""}" placeholder="Exempel: 500 000">
@@ -446,7 +453,9 @@ function renderApplicationItem(app) {
               <span class="source-status-label">Ändra status</span>
               <div class="source-status-options">
                 ${SOURCE_STATUS_CHOICES.map(([label, choice]) => `
-                  <button type="button" class="source-status-option status-choice-${choice} ${app.status === choice ? "selected" : ""}" data-application-status="${escapeHTML(app.id)}" data-status="${choice}">${label}</button>
+                  <button type="button" role="switch" aria-checked="${app.status === choice}" class="source-status-option status-choice-${choice} ${app.status === choice ? "selected" : ""}" data-application-status="${escapeHTML(app.id)}" data-status="${choice}">
+                    <span>${label}</span><span class="status-switch" aria-hidden="true"></span>
+                  </button>
                 `).join("")}
                 <button type="button" class="source-status-option reset-status-option" data-reset-application="${escapeHTML(app.id)}">Nollställ</button>
               </div>
@@ -671,6 +680,23 @@ function bindAppliedControls(container) {
       const item = button.closest(".accordion-item");
       const amountPanel = item.querySelector(".applied-amount");
       const amountInput = item.querySelector("[data-applied-amount]");
+      const existing = localApplications.find(application => application.source_id === sourceId);
+      if (existing?.status === status) {
+        appliedSourceIds.delete(sourceId);
+        localApplications = localApplications.filter(application => application.source_id !== sourceId);
+        hiddenSourceIds.delete(sourceId);
+        item.querySelectorAll("[data-source-status]").forEach(option => {
+          option.classList.remove("selected");
+          option.setAttribute("aria-checked", "false");
+        });
+        item.classList.remove("source-applied", "source-status-applied", "source-status-granted", "source-status-rejected", "source-status-overdue");
+        amountPanel.classList.remove("visible");
+        saveLocalApplications();
+        saveHiddenSourceIds();
+        const body = item.querySelector(".accordion-body");
+        if (item.classList.contains("open")) body.style.maxHeight = `${body.scrollHeight}px`;
+        return;
+      }
       if (status === "not_relevant") {
         let application = localApplications.find(item => item.source_id === sourceId);
         if (!application) {
@@ -699,10 +725,11 @@ function bindAppliedControls(container) {
       }
       item.querySelectorAll("[data-source-status]").forEach(option => {
         option.classList.toggle("selected", option === button);
+        option.setAttribute("aria-checked", String(option === button));
       });
       item.classList.remove("source-status-applied", "source-status-granted", "source-status-rejected", "source-status-overdue");
       item.classList.add("source-applied", `source-status-${status}`);
-      amountPanel.classList.add("visible");
+      amountPanel.classList.toggle("visible", status === "applied");
       saveLocalApplications();
       const body = item.querySelector(".accordion-body");
       if (item.classList.contains("open")) body.style.maxHeight = `${body.scrollHeight}px`;
@@ -729,6 +756,10 @@ function bindApplicationControls(container) {
       const status = button.dataset.status;
       const current = applications.find(application => application.id === applicationId);
       if (!current) return;
+      if (current.status === status) {
+        resetApplication(applicationId);
+        return;
+      }
 
       let local = localApplications.find(application => application.id === applicationId);
       if (!local) {
