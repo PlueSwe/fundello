@@ -367,7 +367,7 @@ function renderSources(data) {
           <span class="accordion-amount" title="${escapeHTML(source.max_amount)}">${escapeHTML(compactAmount(source.max_amount))}</span>
           <span class="badge ${badgeClass}">${escapeHTML(categoryLabel)}</span>
           <span class="application-date" title="${escapeHTML(source.deadline)}">${escapeHTML(listApplicationDate(source.deadline))}</span>
-          <span class="accordion-chevron" aria-hidden="true">↓</span>
+          <span class="accordion-chevron" aria-hidden="true"></span>
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
@@ -504,7 +504,7 @@ function renderApplicationItem(app) {
           <span class="accordion-title">${escapeHTML(app.funder_name)}</span>
           <span class="accordion-amount">${escapeHTML(app.amount)}</span>
           <span class="accordion-meta">Svar: ${formatDate(app.expected_response_date)}</span>
-          <span class="accordion-chevron" aria-hidden="true">↓</span>
+          <span class="accordion-chevron" aria-hidden="true"></span>
         </button>
         <div class="accordion-body" id="${id}">
           <div class="accordion-content">
